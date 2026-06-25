@@ -1,0 +1,725 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		F3931AA82E2339C1004BAC3D /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = F3931AA72E2339C1004BAC3D /* FirebaseAI */; };
+		F3931AAA2E2339C1004BAC3D /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = F3931AA92E2339C1004BAC3D /* FirebaseAnalytics */; };
+		F3931AAC2E2339C1004BAC3D /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = F3931AAB2E2339C1004BAC3D /* FirebaseAnalyticsCore */; };
+		F3931AAE2E2339C1004BAC3D /* FirebaseAnalyticsIdentitySupport in Frameworks */ = {isa = PBXBuildFile; productRef = F3931AAD2E2339C1004BAC3D /* FirebaseAnalyticsIdentitySupport */; };
+		F3931AB02E2339C1004BAC3D /* FirebaseAnalyticsOnDeviceConversion in Frameworks */ = {isa = PBXBuildFile; productRef = F3931AAF2E2339C1004BAC3D /* FirebaseAnalyticsOnDeviceConversion */; };
+		F3CD46D22E2C7AC2009100C3 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = F3CD46D12E2C7AC2009100C3 /* FirebaseFirestore */; };
+		F3CD46FD2E380642009100C3 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F3CD46FC2E380642009100C3 /* FirebaseAuth */; };
+		F3CD46FF2E380649009100C3 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = F3CD46FE2E380649009100C3 /* FirebaseCore */; };
+		F3CD47012E380652009100C3 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = F3CD47002E380652009100C3 /* FirebaseAppCheck */; };
+		F3CD47042E38211B009100C3 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = F3CD47032E38211B009100C3 /* GoogleSignIn */; };
+		F3CD47062E38211B009100C3 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F3CD47052E38211B009100C3 /* GoogleSignInSwift */; };
+		F3ED203A2E93805600A43091 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = F3ED20392E93805600A43091 /* FirebaseStorage */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F3BD4C142DFEA11500F460D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F3BD4BFE2DFEA11400F460D8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F3BD4C052DFEA11400F460D8;
+			remoteInfo = Daypilot;
+		};
+		F3BD4C1E2DFEA11500F460D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F3BD4BFE2DFEA11400F460D8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F3BD4C052DFEA11400F460D8;
+			remoteInfo = Daypilot;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		F3BD4C062DFEA11400F460D8 /* Daypilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Daypilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3BD4C132DFEA11500F460D8 /* DaypilotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaypilotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3BD4C1D2DFEA11500F460D8 /* DaypilotUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaypilotUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F35022272E15EC070063F166 /* Exceptions for "Daypilot" folder in "Daypilot" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F3BD4C052DFEA11400F460D8 /* Daypilot */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F3BD4C082DFEA11400F460D8 /* Daypilot */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F35022272E15EC070063F166 /* Exceptions for "Daypilot" folder in "Daypilot" target */,
+			);
+			path = Daypilot;
+			sourceTree = "<group>";
+		};
+		F3BD4C162DFEA11500F460D8 /* DaypilotTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DaypilotTests;
+			sourceTree = "<group>";
+		};
+		F3BD4C202DFEA11500F460D8 /* DaypilotUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DaypilotUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F3BD4C032DFEA11400F460D8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F3931AAE2E2339C1004BAC3D /* FirebaseAnalyticsIdentitySupport in Frameworks */,
+				F3931AAA2E2339C1004BAC3D /* FirebaseAnalytics in Frameworks */,
+				F3931AB02E2339C1004BAC3D /* FirebaseAnalyticsOnDeviceConversion in Frameworks */,
+				F3931AAC2E2339C1004BAC3D /* FirebaseAnalyticsCore in Frameworks */,
+				F3931AA82E2339C1004BAC3D /* FirebaseAI in Frameworks */,
+				F3ED203A2E93805600A43091 /* FirebaseStorage in Frameworks */,
+				F3CD47042E38211B009100C3 /* GoogleSignIn in Frameworks */,
+				F3CD46FD2E380642009100C3 /* FirebaseAuth in Frameworks */,
+				F3CD46FF2E380649009100C3 /* FirebaseCore in Frameworks */,
+				F3CD47012E380652009100C3 /* FirebaseAppCheck in Frameworks */,
+				F3CD46D22E2C7AC2009100C3 /* FirebaseFirestore in Frameworks */,
+				F3CD47062E38211B009100C3 /* GoogleSignInSwift in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F3BD4C102DFEA11500F460D8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F3BD4C1A2DFEA11500F460D8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F3BD4BFD2DFEA11400F460D8 = {
+			isa = PBXGroup;
+			children = (
+				F3BD4C082DFEA11400F460D8 /* Daypilot */,
+				F3BD4C162DFEA11500F460D8 /* DaypilotTests */,
+				F3BD4C202DFEA11500F460D8 /* DaypilotUITests */,
+				F3CD46D02E2C7AC2009100C3 /* Frameworks */,
+				F3BD4C072DFEA11400F460D8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F3BD4C072DFEA11400F460D8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F3BD4C062DFEA11400F460D8 /* Daypilot.app */,
+				F3BD4C132DFEA11500F460D8 /* DaypilotTests.xctest */,
+				F3BD4C1D2DFEA11500F460D8 /* DaypilotUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F3CD46D02E2C7AC2009100C3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F3BD4C052DFEA11400F460D8 /* Daypilot */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F3BD4C272DFEA11500F460D8 /* Build configuration list for PBXNativeTarget "Daypilot" */;
+			buildPhases = (
+				F3BD4C022DFEA11400F460D8 /* Sources */,
+				F3BD4C032DFEA11400F460D8 /* Frameworks */,
+				F3BD4C042DFEA11400F460D8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F3BD4C082DFEA11400F460D8 /* Daypilot */,
+			);
+			name = Daypilot;
+			packageProductDependencies = (
+				F3931AA72E2339C1004BAC3D /* FirebaseAI */,
+				F3931AA92E2339C1004BAC3D /* FirebaseAnalytics */,
+				F3931AAB2E2339C1004BAC3D /* FirebaseAnalyticsCore */,
+				F3931AAD2E2339C1004BAC3D /* FirebaseAnalyticsIdentitySupport */,
+				F3931AAF2E2339C1004BAC3D /* FirebaseAnalyticsOnDeviceConversion */,
+				F3CD46D12E2C7AC2009100C3 /* FirebaseFirestore */,
+				F3CD46FC2E380642009100C3 /* FirebaseAuth */,
+				F3CD46FE2E380649009100C3 /* FirebaseCore */,
+				F3CD47002E380652009100C3 /* FirebaseAppCheck */,
+				F3CD47032E38211B009100C3 /* GoogleSignIn */,
+				F3CD47052E38211B009100C3 /* GoogleSignInSwift */,
+				F3ED20392E93805600A43091 /* FirebaseStorage */,
+			);
+			productName = Daypilot;
+			productReference = F3BD4C062DFEA11400F460D8 /* Daypilot.app */;
+			productType = "com.apple.product-type.application";
+		};
+		F3BD4C122DFEA11500F460D8 /* DaypilotTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F3BD4C2A2DFEA11500F460D8 /* Build configuration list for PBXNativeTarget "DaypilotTests" */;
+			buildPhases = (
+				F3BD4C0F2DFEA11500F460D8 /* Sources */,
+				F3BD4C102DFEA11500F460D8 /* Frameworks */,
+				F3BD4C112DFEA11500F460D8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F3BD4C152DFEA11500F460D8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F3BD4C162DFEA11500F460D8 /* DaypilotTests */,
+			);
+			name = DaypilotTests;
+			packageProductDependencies = (
+			);
+			productName = DaypilotTests;
+			productReference = F3BD4C132DFEA11500F460D8 /* DaypilotTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F3BD4C1C2DFEA11500F460D8 /* DaypilotUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F3BD4C2D2DFEA11500F460D8 /* Build configuration list for PBXNativeTarget "DaypilotUITests" */;
+			buildPhases = (
+				F3BD4C192DFEA11500F460D8 /* Sources */,
+				F3BD4C1A2DFEA11500F460D8 /* Frameworks */,
+				F3BD4C1B2DFEA11500F460D8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F3BD4C1F2DFEA11500F460D8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F3BD4C202DFEA11500F460D8 /* DaypilotUITests */,
+			);
+			name = DaypilotUITests;
+			packageProductDependencies = (
+			);
+			productName = DaypilotUITests;
+			productReference = F3BD4C1D2DFEA11500F460D8 /* DaypilotUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F3BD4BFE2DFEA11400F460D8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					F3BD4C052DFEA11400F460D8 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					F3BD4C122DFEA11500F460D8 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = F3BD4C052DFEA11400F460D8;
+					};
+					F3BD4C1C2DFEA11500F460D8 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = F3BD4C052DFEA11400F460D8;
+					};
+				};
+			};
+			buildConfigurationList = F3BD4C012DFEA11400F460D8 /* Build configuration list for PBXProject "Daypilot" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F3BD4BFD2DFEA11400F460D8;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				F3CD47022E38211B009100C3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F3BD4C072DFEA11400F460D8 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F3BD4C052DFEA11400F460D8 /* Daypilot */,
+				F3BD4C122DFEA11500F460D8 /* DaypilotTests */,
+				F3BD4C1C2DFEA11500F460D8 /* DaypilotUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F3BD4C042DFEA11400F460D8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F3BD4C112DFEA11500F460D8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F3BD4C1B2DFEA11500F460D8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F3BD4C022DFEA11400F460D8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F3BD4C0F2DFEA11500F460D8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F3BD4C192DFEA11500F460D8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F3BD4C152DFEA11500F460D8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F3BD4C052DFEA11400F460D8 /* Daypilot */;
+			targetProxy = F3BD4C142DFEA11500F460D8 /* PBXContainerItemProxy */;
+		};
+		F3BD4C1F2DFEA11500F460D8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F3BD4C052DFEA11400F460D8 /* Daypilot */;
+			targetProxy = F3BD4C1E2DFEA11500F460D8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		F3BD4C252DFEA11500F460D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 224L5L697K;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F3BD4C262DFEA11500F460D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 224L5L697K;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F3BD4C282DFEA11500F460D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Daypilot/DaypilotDebug.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3BPYR6J96P;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Daypilot/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Taskvibe;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDarkContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.varunjajara.Daypilot;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F3BD4C292DFEA11500F460D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Daypilot/DaypilotRelease.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3BPYR6J96P;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Daypilot/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Taskvibe;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDarkContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.varunjajara.Daypilot;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F3BD4C2B2DFEA11500F460D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 224L5L697K;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.varunjajara.DaypilotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Daypilot.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Daypilot";
+			};
+			name = Debug;
+		};
+		F3BD4C2C2DFEA11500F460D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 224L5L697K;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.varunjajara.DaypilotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Daypilot.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Daypilot";
+			};
+			name = Release;
+		};
+		F3BD4C2E2DFEA11500F460D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 224L5L697K;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.varunjajara.DaypilotUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Daypilot;
+			};
+			name = Debug;
+		};
+		F3BD4C2F2DFEA11500F460D8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 224L5L697K;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.varunjajara.DaypilotUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Daypilot;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F3BD4C012DFEA11400F460D8 /* Build configuration list for PBXProject "Daypilot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F3BD4C252DFEA11500F460D8 /* Debug */,
+				F3BD4C262DFEA11500F460D8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F3BD4C272DFEA11500F460D8 /* Build configuration list for PBXNativeTarget "Daypilot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F3BD4C282DFEA11500F460D8 /* Debug */,
+				F3BD4C292DFEA11500F460D8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F3BD4C2A2DFEA11500F460D8 /* Build configuration list for PBXNativeTarget "DaypilotTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F3BD4C2B2DFEA11500F460D8 /* Debug */,
+				F3BD4C2C2DFEA11500F460D8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F3BD4C2D2DFEA11500F460D8 /* Build configuration list for PBXNativeTarget "DaypilotUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F3BD4C2E2DFEA11500F460D8 /* Debug */,
+				F3BD4C2F2DFEA11500F460D8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.15.0;
+			};
+		};
+		F3CD47022E38211B009100C3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F3931AA72E2339C1004BAC3D /* FirebaseAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAI;
+		};
+		F3931AA92E2339C1004BAC3D /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		F3931AAB2E2339C1004BAC3D /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
+		};
+		F3931AAD2E2339C1004BAC3D /* FirebaseAnalyticsIdentitySupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsIdentitySupport;
+		};
+		F3931AAF2E2339C1004BAC3D /* FirebaseAnalyticsOnDeviceConversion */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsOnDeviceConversion;
+		};
+		F3CD46D12E2C7AC2009100C3 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		F3CD46FC2E380642009100C3 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		F3CD46FE2E380649009100C3 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		F3CD47002E380652009100C3 /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
+		};
+		F3CD47032E38211B009100C3 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3CD47022E38211B009100C3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		F3CD47052E38211B009100C3 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3CD47022E38211B009100C3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		F3ED20392E93805600A43091 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3931AA62E2339C1004BAC3D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = F3BD4BFE2DFEA11400F460D8 /* Project object */;
+}

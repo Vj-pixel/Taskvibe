@@ -1,0 +1,185 @@
+//
+//  DaypilotApp.swift
+//
+
+import SwiftUI
+import SwiftData
+import UserNotifications
+import FirebaseCore
+import FirebaseAppCheck
+import GoogleSignIn
+
+// MARK: - AppAttestProviderFactory
+class AppAttestProviderFactory: NSObject, AppCheckProviderFactory {
+    func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
+        return AppAttestProvider(app: app)
+    }
+}
+
+// MARK: - AppDelegate
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
+    ) -> Bool {
+        
+        // Configure Firebase
+        FirebaseApp.configure()
+        
+        // App Check Provider
+        let providerFactory = AppAttestProviderFactory()
+        AppCheck.setAppCheckProviderFactory(providerFactory)
+        
+        return true
+    }
+}
+
+// MARK: - Main App
+@main
+struct DaypilotApp: App {
+    @AppStorage("isAuthenticated") private var isAuthenticated = false
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @StateObject private var gradientManager = SunsetGradientManager()
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+
+    var body: some Scene {
+        WindowGroup {
+            RootView(
+                isAuthenticated: $isAuthenticated,
+                hasSeenOnboarding: $hasSeenOnboarding,
+                gradientManager: gradientManager
+            )
+            .onOpenURL { url in
+                GIDSignIn.sharedInstance.handle(url)
+            }
+        }
+        .modelContainer(for: Daypilot.self)
+    }
+
+    init() {
+        UNUserNotificationCenter.current()
+            .requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                print(granted ? "✅ Notification permission granted"
+                              : "❌ Notification permission denied")
+            }
+    }
+}
+
+// MARK: - Root View (handles onboarding → auth → app flow)
+struct RootView: View {
+    @Binding var isAuthenticated: Bool
+    @Binding var hasSeenOnboarding: Bool
+    @ObservedObject var gradientManager: SunsetGradientManager
+    @AppStorage("selectedTheme") private var selectedTheme = "original"
+
+    var body: some View {
+        Group {
+            if isAuthenticated {
+                ContentView()
+                    .environmentObject(gradientManager)
+            } else if hasSeenOnboarding {
+                AuthFlowView {
+                    isAuthenticated = true
+                }
+            } else {
+                OnboardingView {
+                    hasSeenOnboarding = true
+                }
+            }
+        }
+        .tint(AppThemes.find(selectedTheme).accentColor)
+        .animation(.easeInOut(duration: 0.4), value: isAuthenticated)
+        .animation(.easeInOut(duration: 0.4), value: hasSeenOnboarding)
+    }
+}
+
+// MARK: - Models
+enum UrgencyLevel: String, Codable, CaseIterable {
+    case urgent = "Urgent"
+    case kindaUrgent = "Kinda Urgent"
+    case notUrgent = "Not Urgent"
+}
+
+enum TaskStatus: String, CaseIterable, Codable {
+    case open = "Open"
+    case inProgress = "In Progress"
+    case blocked = "Blocked"
+    case completed = "Completed"
+}
+
+enum TaskType: String, Codable, CaseIterable {
+    case task = "Task"
+    case habit = "Habit"
+}
+
+enum HabitFrequency: String, Codable, CaseIterable {
+    case daily = "Daily"
+    case everyOtherDay = "Every Other Day"
+    case weekly = "Weekly"
+}
+
+@Model
+class Daypilot: Identifiable {
+    var uuid: UUID = UUID()
+    
+    var title: String
+    var dueDate: Date?
+    var urgency: UrgencyLevel
+    var isCompleted: Bool = false
+    
+    var statusRaw: String = TaskStatus.open.rawValue
+    var progress: Int = 0
+    
+    // Task or Habit
+    var typeRaw: String = TaskType.task.rawValue
+    var habitFrequencyRaw: String = HabitFrequency.daily.rawValue
+
+    // Habit streak tracking (auto-migrated by SwiftData — both have safe defaults)
+    var streakCount: Int = 0
+    var lastCompletedDate: Date? = nil
+
+    // Source label for imported tasks (e.g., "Canvas")
+    var sourceTag: String? = nil
+    
+    // Computed properties
+    var type: TaskType {
+        get { TaskType(rawValue: typeRaw) ?? .task }
+        set { typeRaw = newValue.rawValue }
+    }
+    
+    var habitFrequency: HabitFrequency {
+        get { HabitFrequency(rawValue: habitFrequencyRaw) ?? .daily }
+        set { habitFrequencyRaw = newValue.rawValue }
+    }
+    
+    var status: TaskStatus {
+        get { TaskStatus(rawValue: statusRaw) ?? .open }
+        set { statusRaw = newValue.rawValue }
+    }
+    
+    // Initializer
+    init(
+        title: String,
+        isCompleted: Bool = false,
+        dueDate: Date? = nil,
+        urgency: UrgencyLevel,
+        status: TaskStatus = .open,
+        progress: Int = 0,
+        type: TaskType = .task,
+        habitFrequency: HabitFrequency = .daily,
+        streakCount: Int = 0,
+        lastCompletedDate: Date? = nil
+    ) {
+        self.title = title
+        self.isCompleted = isCompleted
+        self.dueDate = dueDate
+        self.urgency = urgency
+        self.statusRaw = status.rawValue
+        self.progress = progress
+        self.typeRaw = type.rawValue
+        self.habitFrequencyRaw = habitFrequency.rawValue
+        self.streakCount = streakCount
+        self.lastCompletedDate = lastCompletedDate
+    }
+}
+
