@@ -25,11 +25,18 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         
         // Configure Firebase
         FirebaseApp.configure()
-        
+
         // App Check Provider
         let providerFactory = AppAttestProviderFactory()
         AppCheck.setAppCheckProviderFactory(providerFactory)
-        
+
+        // Register UserDefaults defaults so HabitScheduler reads correct values
+        // before the user ever opens Settings.
+        UserDefaults.standard.register(defaults: [
+            "notificationsEnabled": true,
+            "darkModeEnabled": true
+        ])
+
         return true
     }
 }
@@ -138,8 +145,19 @@ class Daypilot: Identifiable {
     var streakCount: Int = 0
     var lastCompletedDate: Date? = nil
 
-    // Source label for imported tasks (e.g., "Canvas")
+    // Source label for imported tasks (e.g., "Canvas", "Calendar")
     var sourceTag: String? = nil
+
+    // Emoji or image customization
+    var taskEmoji: String? = nil
+    var attachmentImagePath: String? = nil   // filename relative to Documents dir
+
+    var attachmentImage: UIImage? {
+        guard let path = attachmentImagePath else { return nil }
+        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(path)
+        return UIImage(contentsOfFile: url.path)
+    }
     
     // Computed properties
     var type: TaskType {

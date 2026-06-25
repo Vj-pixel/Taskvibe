@@ -57,3 +57,6 @@ DerivedData/
 # Crashlytics
 Crashlytics.sh
 fabric.apikey
+GoogleService-Info.plist
+GoogleService-Info.plist
+.DS_Store

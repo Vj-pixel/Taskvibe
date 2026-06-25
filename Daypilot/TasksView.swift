@@ -5,6 +5,8 @@ import UIKit
 import SwiftData
 import UserNotifications
 import UniformTypeIdentifiers
+import AudioToolbox
+import PhotosUI
 
 // MARK: - StatusRing (progress arc only — icon moved to corner badge)
 
@@ -45,7 +47,7 @@ struct StatusCornerBadge: View {
 
     private var iconName: String {
         switch status {
-        case .open:       return "circle"
+        case .open:       return "minus"
         case .inProgress: return "clock.fill"
         case .blocked:    return "xmark.circle.fill"
         case .completed:  return "checkmark.circle.fill"
@@ -142,22 +144,22 @@ struct ActionHintView: View {
         RoundedRectangle(cornerRadius: 16)
             .fill(
                 LinearGradient(
-                    colors: [tint, tint.opacity(0.72)],
+                    colors: [tint, tint.opacity(0.75)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
             .overlay(
-                VStack(spacing: 5) {
+                HStack(spacing: 8) {
                     Image(systemName: icon)
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.system(size: 20, weight: .semibold))
                     Text(label)
-                        .font(.footnote.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                 }
                 .foregroundStyle(.white)
-                .scaleEffect(isTriggered ? 1.12 : 0.82)
-                .opacity(isTriggered ? 1.0 : 0.75)
-                .animation(.spring(response: 0.2, dampingFraction: 0.55), value: isTriggered)
+                .scaleEffect(isTriggered ? 1.10 : 0.84)
+                .opacity(isTriggered ? 1.0 : 0.78)
+                .animation(.spring(response: 0.22, dampingFraction: 0.65), value: isTriggered)
             )
     }
 }
@@ -181,7 +183,12 @@ struct TaskContentView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            if task.type == .task {
+            // Emoji overrides the status ring when set
+            if let emoji = task.taskEmoji, !emoji.isEmpty {
+                Text(emoji)
+                    .font(.system(size: 30))
+                    .frame(width: 38, height: 38)
+            } else if task.type == .task {
                 StatusRing(progress: task.progress, color: ringColor) {
                     let all = TaskStatus.allCases
                     let idx = all.firstIndex(of: task.status) ?? 0
@@ -193,15 +200,7 @@ struct TaskContentView: View {
                 HStack(spacing: 6) {
                     Text(task.title)
                         .font(.headline)
-                    if task.sourceTag == "Canvas" {
-                        Text("Canvas")
-                            .font(.caption2.weight(.bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(red: 0.88, green: 0.28, blue: 0.08))
-                            .clipShape(Capsule())
-                    }
+                    sourceTagBadge
                 }
 
                 let displayDate = (task.type == .habit ? occurrenceDate : nil) ?? task.dueDate
@@ -238,6 +237,16 @@ struct TaskContentView: View {
                 Text(task.urgency.rawValue)
                     .font(.caption2)
                     .foregroundColor(.primary.opacity(0.6))
+
+                // Attachment image thumbnail
+                if let img = task.attachmentImage {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 56, height: 56)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .padding(.top, 2)
+                }
             }
 
             Spacer()
@@ -296,6 +305,21 @@ struct TaskContentView: View {
 
     private var ringColor: Color { AppThemes.find(selectedTheme).urgencyColor(for: task.urgency) }
 
+    @ViewBuilder
+    private var sourceTagBadge: some View {
+        if let tag = task.sourceTag, !tag.isEmpty {
+            let color: Color = tag == "Canvas" ? Color(red: 0.88, green: 0.28, blue: 0.08)
+                             : tag == "Calendar" ? .green : .blue
+            Text(tag)
+                .font(.caption2.weight(.bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(color)
+                .clipShape(Capsule())
+        }
+    }
+
     private var taskScale: CGFloat {
         isDragging ? 0.97 : 1.0
     }
@@ -327,11 +351,14 @@ struct DraggableTaskView: View {
     @State private var readyToEdit = false
     @State private var readyToShare = false
     @State private var showFutureHabitAlert = false
+    @State private var isBeingDeleted = false
 
-    private let deleteThreshold: CGFloat  = -110
-    private let completeThreshold: CGFloat =  110
-    private let editThreshold: CGFloat    = -90
-    private let shareThreshold: CGFloat   =  90
+    // Raised thresholds prevent accidental triggers on short swipes.
+    // Diagonal conflicts are resolved by checking horizontal before vertical.
+    private let deleteThreshold: CGFloat  = -130
+    private let completeThreshold: CGFloat =  130
+    private let editThreshold: CGFloat    = -95
+    private let shareThreshold: CGFloat   =  95
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -348,7 +375,10 @@ struct DraggableTaskView: View {
                 occurrenceDate: occurrenceDate,
                 isFutureHabit: isFutureHabit
             )
-            .animation(.interactiveSpring(response: 0.28, dampingFraction: 0.78), value: dragOffset)
+            .scaleEffect(isBeingDeleted ? 0.75 : 1.0)
+            .opacity(isBeingDeleted ? 0.0 : 1.0)
+            .animation(.easeIn(duration: 0.28), value: isBeingDeleted)
+            .animation(.interactiveSpring(response: 0.30, dampingFraction: 0.80), value: dragOffset)
             .gesture(createDragGesture())
             .contextMenu {
                 if !isFutureHabit {
@@ -411,21 +441,35 @@ struct DraggableTaskView: View {
             showFutureHabitAlert = true
             return
         }
-        // Dampen translation beyond thresholds so the card resists over-pull
-        var t = value.translation
-        if t.width < deleteThreshold  { t.width  = deleteThreshold  + (t.width  - deleteThreshold)  * 0.3 }
-        if t.width > completeThreshold { t.width  = completeThreshold + (t.width  - completeThreshold) * 0.3 }
-        if t.height < editThreshold   { t.height = editThreshold   + (t.height - editThreshold)   * 0.3 }
-        if t.height > shareThreshold  { t.height = shareThreshold  + (t.height - shareThreshold)  * 0.3 }
+        // Only allow horizontal OR vertical drag to prevent diagonal conflicts
+        let tx = value.translation.width
+        let ty = value.translation.height
+        let isHorizontal = abs(tx) >= abs(ty)
+
+        // Stiffer resistance past threshold (0.2 factor instead of 0.3)
+        var t = CGSize.zero
+        if isHorizontal {
+            t.width = tx < deleteThreshold
+                ? deleteThreshold   + (tx - deleteThreshold)   * 0.2
+                : tx > completeThreshold
+                    ? completeThreshold + (tx - completeThreshold) * 0.2
+                    : tx
+        } else {
+            t.height = ty < editThreshold
+                ? editThreshold  + (ty - editThreshold)  * 0.2
+                : ty > shareThreshold
+                    ? shareThreshold + (ty - shareThreshold) * 0.2
+                    : ty
+        }
 
         dragOffset = t
         isDragging = true
 
-        withAnimation(.easeOut(duration: 0.15)) {
-            readyToDelete  = value.translation.width  < deleteThreshold
-            readyToComplete = value.translation.width  > completeThreshold
-            readyToEdit    = !readyToDelete && !readyToComplete && value.translation.height < editThreshold
-            readyToShare   = !readyToDelete && !readyToComplete && value.translation.height > shareThreshold
+        withAnimation(.easeOut(duration: 0.12)) {
+            readyToDelete   = isHorizontal && tx < deleteThreshold
+            readyToComplete = isHorizontal && tx > completeThreshold
+            readyToEdit     = !isHorizontal && ty < editThreshold
+            readyToShare    = !isHorizontal && ty > shareThreshold
         }
     }
 
@@ -440,35 +484,40 @@ struct DraggableTaskView: View {
     }
 
     private func performDeleteAction() {
-        withAnimation(.easeIn(duration: 0.22)) {
-            dragOffset = CGSize(width: -500, height: dragOffset.height)
+        // Play system trash sound
+        AudioServicesPlaySystemSound(1117)
+        // Animate card shrinking and flying off
+        withAnimation(.easeIn(duration: 0.30)) {
+            isBeingDeleted = true
+            dragOffset = CGSize(width: -450, height: dragOffset.height)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) { onDelete(); resetAllStates() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.31) { onDelete(); resetAllStates() }
     }
 
     private func performCompleteAction() {
-        withAnimation(.easeIn(duration: 0.22)) {
-            dragOffset = CGSize(width: 500, height: dragOffset.height)
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
+            dragOffset = CGSize(width: 450, height: dragOffset.height)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) { onComplete(); resetAllStates() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) { onComplete(); resetAllStates() }
     }
 
     private func performEditAction() {
         snapBack()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { onEdit() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { onEdit() }
     }
 
     private func performShareAction() {
         snapBack()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { presentShareSheet() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { presentShareSheet() }
     }
 
     private func snapBack() {
-        withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) { resetAllStates() }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) { resetAllStates() }
     }
 
     private func resetAllStates() {
         dragOffset = .zero
+        isBeingDeleted = false
         readyToDelete = false; readyToComplete = false
         readyToEdit = false; readyToShare = false
     }
@@ -586,6 +635,8 @@ struct TaskFormView: View {
     @Binding var selectedHabitFrequency: HabitFrequency
     @Binding var selectedStatus: TaskStatus
     @Binding var selectedProgress: Int
+    @Binding var taskEmoji: String
+    @Binding var attachmentImagePath: String?
 
     var onSave: () -> Void
     var isEditing: Bool = false
@@ -593,6 +644,12 @@ struct TaskFormView: View {
 
     @AppStorage("selectedTheme") private var selectedTheme = "original"
     private var theme: ThemeOption { AppThemes.find(selectedTheme) }
+
+    @State private var showEmojiPicker = false
+    @State private var selectedPhoto: PhotosPickerItem? = nil
+    @State private var attachmentPreview: UIImage? = nil
+
+    private let commonEmojis = ["🏋️","🧘","🏃","🚴","🍎","💧","📚","✏️","💡","🎯","🧹","💰","🎵","🎨","🌿","😴","🧠","❤️","🌟","⚡","🔥","🏆","🧪","💻","📱","🗓","🍳","🚿","🌅","🎉"]
 
     var body: some View {
         ScrollView {
@@ -672,6 +729,110 @@ struct TaskFormView: View {
                 TextField("Enter Task", text: $toDoTitle)
                     .textFieldStyle(.roundedBorder)
 
+                // Emoji & photo attachment row
+                HStack(spacing: 12) {
+                    Button {
+                        showEmojiPicker.toggle()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(taskEmoji.isEmpty ? "😊" : taskEmoji)
+                                .font(.system(size: 22))
+                            Text(taskEmoji.isEmpty ? "Add emoji" : "Change emoji")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.white.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showEmojiPicker) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Pick an emoji").font(.headline).padding(.top, 8)
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 10) {
+                                ForEach(commonEmojis, id: \.self) { emoji in
+                                    Button {
+                                        taskEmoji = emoji
+                                        showEmojiPicker = false
+                                    } label: {
+                                        Text(emoji).font(.system(size: 28))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            TextField("Custom emoji", text: $taskEmoji)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.title)
+                                .onChange(of: taskEmoji) { _, v in
+                                    if v.count > 2 { taskEmoji = String(v.prefix(2)) }
+                                }
+                            Button("Clear emoji") {
+                                taskEmoji = ""
+                                showEmojiPicker = false
+                            }
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding(.bottom, 8)
+                        }
+                        .padding(.horizontal)
+                        .frame(minWidth: 260)
+                        .presentationCompactAdaptation(.popover)
+                    }
+
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        HStack(spacing: 6) {
+                            if let preview = attachmentPreview {
+                                Image(uiImage: preview)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 28, height: 28)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            } else {
+                                Image(systemName: "photo.badge.plus")
+                                    .font(.system(size: 18))
+                            }
+                            Text(attachmentPreview == nil ? "Add photo" : "Change photo")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.white.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .onChange(of: selectedPhoto) { _, item in
+                        guard let item else { return }
+                        Task {
+                            if let data = try? await item.loadTransferable(type: Data.self),
+                               let image = UIImage(data: data) {
+                                let filename = "task-attach-\(UUID().uuidString).jpg"
+                                let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                                    .appendingPathComponent(filename)
+                                if let jpeg = image.jpegData(compressionQuality: 0.7) {
+                                    try? jpeg.write(to: url)
+                                    await MainActor.run {
+                                        attachmentImagePath = filename
+                                        attachmentPreview = image
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if attachmentPreview != nil {
+                        Button {
+                            attachmentPreview = nil
+                            attachmentImagePath = nil
+                            selectedPhoto = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.red.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
                 DatePicker("Due Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
 
                 Picker("Urgency", selection: $selectedUrgency) {
@@ -694,6 +855,14 @@ struct TaskFormView: View {
             }
             .padding()
             .padding(.bottom, 16)
+        }
+        .onAppear {
+            // Restore preview image when editing an existing task
+            if let path = attachmentImagePath {
+                let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                    .appendingPathComponent(path)
+                attachmentPreview = UIImage(contentsOfFile: url.path)
+            }
         }
     }
 
@@ -850,6 +1019,10 @@ struct TasksView: View {
     @State private var selectedType: TaskType = .task
     @State private var selectedHabitFrequency: HabitFrequency = .daily
     @State private var isCanvasImportShowing = false
+    @State private var habitDeleteTarget: Daypilot? = nil
+    @State private var showHabitDeleteDialog = false
+    @State private var formEmoji: String = ""
+    @State private var formAttachmentImagePath: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -952,6 +1125,23 @@ struct TasksView: View {
             CanvasView()
                 .environmentObject(gradientManager)
         }
+        .confirmationDialog(
+            "Remove this habit?",
+            isPresented: $showHabitDeleteDialog,
+            titleVisibility: .visible
+        ) {
+            Button("Skip today only") {
+                if let h = habitDeleteTarget { skipHabitToday(h) }
+                habitDeleteTarget = nil
+            }
+            Button("Delete habit entirely", role: .destructive) {
+                if let h = habitDeleteTarget { deleteTask(h) }
+                habitDeleteTarget = nil
+            }
+            Button("Cancel", role: .cancel) { habitDeleteTarget = nil }
+        } message: {
+            Text("You can skip it for today, or remove it permanently.")
+        }
     }
 
     private var shouldShowEmptyState: Bool {
@@ -1007,7 +1197,7 @@ struct TasksView: View {
             task: toDo,
             disappearingTaskID: disappearingTaskID,
             newTaskIDs: $newTaskIDs,
-            onDelete: deleteTask,
+            onDelete: handleDeleteRequest,
             onEdit: startEditing,
             onComplete: markTaskDone,
             onStatusChange: updateTaskStatus,
@@ -1041,6 +1231,8 @@ struct TasksView: View {
             selectedHabitFrequency: $selectedHabitFrequency,
             selectedStatus: $selectedStatus,
             selectedProgress: $selectedProgress,
+            taskEmoji: $formEmoji,
+            attachmentImagePath: $formAttachmentImagePath,
             onSave: addTask
         )
     }
@@ -1056,6 +1248,8 @@ struct TasksView: View {
             selectedHabitFrequency: $selectedHabitFrequency,
             selectedStatus: $selectedStatus,
             selectedProgress: $selectedProgress,
+            taskEmoji: $formEmoji,
+            attachmentImagePath: $formAttachmentImagePath,
             onSave: updateTask,
             isEditing: true,
             task: editingTask
@@ -1087,10 +1281,27 @@ struct TasksView: View {
         }
     }
 
+    private func handleDeleteRequest(_ task: Daypilot) {
+        if task.type == .habit {
+            habitDeleteTarget = task
+            showHabitDeleteDialog = true
+        } else {
+            deleteTask(task)
+        }
+    }
+
     private func deleteTask(_ task: Daypilot) {
         withAnimation {
             cancelNotification(for: task)
             modelContext.delete(task)
+            try? modelContext.save()
+        }
+    }
+
+    private func skipHabitToday(_ task: Daypilot) {
+        // Mark as done for today without incrementing the streak
+        withAnimation {
+            task.lastCompletedDate = Date()
             try? modelContext.save()
         }
     }
@@ -1105,6 +1316,8 @@ struct TasksView: View {
         selectedProgress = steps.min(by: { abs($0 - task.progress) < abs($1 - task.progress) }) ?? 0
         selectedType = task.type
         selectedHabitFrequency = task.habitFrequency
+        formEmoji = task.taskEmoji ?? ""
+        formAttachmentImagePath = task.attachmentImagePath
         isEditingSheetShowing = true
     }
 
@@ -1117,6 +1330,8 @@ struct TasksView: View {
         selectedProgress = 0
         selectedType = .task
         selectedHabitFrequency = .daily
+        formEmoji = ""
+        formAttachmentImagePath = nil
     }
 
     private func addTask() {
@@ -1134,6 +1349,8 @@ struct TasksView: View {
             type: selectedType,
             habitFrequency: selectedHabitFrequency
         )
+        if !formEmoji.isEmpty { newTask.taskEmoji = formEmoji }
+        newTask.attachmentImagePath = formAttachmentImagePath
         modelContext.insert(newTask)
         do {
             try modelContext.save()
@@ -1155,6 +1372,8 @@ struct TasksView: View {
         task.progress = selectedProgress
         task.type = selectedType
         task.habitFrequency = selectedHabitFrequency
+        task.taskEmoji = formEmoji.isEmpty ? nil : formEmoji
+        task.attachmentImagePath = formAttachmentImagePath
         do {
             try modelContext.save()
             scheduleHabitNotifications(for: task)

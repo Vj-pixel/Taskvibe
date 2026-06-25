@@ -316,12 +316,29 @@ struct ProfileView: View {
         updateTaskStats()
     }
 
+    private func profileCacheURL(for userId: String) -> URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("profile_\(userId).jpg")
+    }
+
     private func loadProfileImage(from url: URL) {
         Task {
+            // Try disk cache first — avoids a network round-trip every launch
+            if let userId = Auth.auth().currentUser?.uid {
+                let cached = profileCacheURL(for: userId)
+                if let data = try? Data(contentsOf: cached), let img = UIImage(data: data) {
+                    await MainActor.run { self.profileImage = img }
+                    return
+                }
+            }
+            // Download and cache to disk
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
                 if let image = UIImage(data: data) {
                     await MainActor.run { self.profileImage = image }
+                    if let userId = Auth.auth().currentUser?.uid {
+                        try? data.write(to: profileCacheURL(for: userId))
+                    }
                 }
             } catch {
                 print("Failed to load profile image: \(error.localizedDescription)")
@@ -351,6 +368,11 @@ struct ProfileView: View {
                 return
             }
 
+            // Invalidate disk cache before writing new image
+            let cacheURL = profileCacheURL(for: userId)
+            try? FileManager.default.removeItem(at: cacheURL)
+            try? compressedData.write(to: cacheURL)
+
             let storageRef = Storage.storage().reference()
             let profileImageRef = storageRef.child("profile_images/\(userId).jpg")
 
@@ -364,7 +386,8 @@ struct ProfileView: View {
             changeRequest?.photoURL = downloadURL
             try await changeRequest?.commitChanges()
 
-            await MainActor.run { isUploadingImage = false }
+            // Reload user so all profile state is fresh
+            await MainActor.run { isUploadingImage = false; loadUser() }
 
         } catch {
             await MainActor.run {
