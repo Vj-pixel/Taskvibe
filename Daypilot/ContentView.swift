@@ -31,6 +31,9 @@ struct ContentView: View {
             Tab("Canvas", systemImage: "books.vertical") {
                 CanvasView()
             }
+            Tab("Pomodoro", systemImage: "timer") {
+                PomodoroView()
+            }
             Tab("Settings", systemImage: "gear") {
                 SettingsView(darkModeEnabled: $darkModeEnabled)
             }
