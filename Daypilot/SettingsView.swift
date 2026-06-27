@@ -14,6 +14,8 @@ struct SettingsView: View {
     @AppStorage("selectedFontDesign")    private var selectedFontDesign    = "default"
     @AppStorage("progressDisplayStyle")  private var progressDisplayStyle  = "segmented"
     @AppStorage("textSizeOption")        private var textSizeOption        = "default"
+    @AppStorage("tabOrder")              private var tabOrder              = "tasks,canvas,settings,profile"
+    @AppStorage("pomodoroPlacement")     private var pomodoroPlacement     = "corner"
 
     @Environment(\.modelContext) private var modelContext
     @Query private var daypilots: [Daypilot]
@@ -150,6 +152,25 @@ struct SettingsView: View {
                     }
                 }
                 .listRowBackground(Color.white.opacity(0.10))
+
+                // MARK: Advanced
+                Section(header: sectionHeader("Advanced")) {
+                    NavigationLink(destination: TabOrderView(tabOrder: $tabOrder).environmentObject(gradientManager)) {
+                        SettingsIconRow(systemImage: "square.grid.2x2", label: "Tab Order", iconColor: .indigo)
+                    }
+                    Picker(selection: $pomodoroPlacement) {
+                        Text("Corner button").tag("corner")
+                        Text("Dedicated tab").tag("tab")
+                    } label: {
+                        HStack {
+                            SettingsIconRow(systemImage: "timer", label: "Focus Timer", iconColor: .orange)
+                            Spacer()
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(.white.opacity(0.7))
+                }
+                .listRowBackground(Color.white.opacity(0.10))
             }
             .scrollContentBackground(.hidden)
             .background {
@@ -197,6 +218,61 @@ struct SettingsView: View {
     private func deleteAllTasks() {
         for task in daypilots { modelContext.delete(task) }
         try? modelContext.save()
+    }
+}
+
+// MARK: - TabOrderView
+
+struct TabOrderView: View {
+    @Binding var tabOrder: String
+    @EnvironmentObject private var gradientManager: SunsetGradientManager
+    @State private var tabIds: [String] = []
+
+    private let tabDefs: [String: (label: String, icon: String, color: Color)] = [
+        "tasks":    ("Tasks",    "checklist",      .blue),
+        "canvas":   ("Canvas",   "books.vertical", .orange),
+        "settings": ("Settings", "gear",           .gray),
+        "profile":  ("Profile",  "person.circle",  .purple),
+        "focus":    ("Focus",    "timer",          .green),
+    ]
+
+    var body: some View {
+        List {
+            Section(header: Text("Drag to reorder your tabs").foregroundColor(.white.opacity(0.55)).font(.caption)) {
+                ForEach(tabIds, id: \.self) { id in
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(tabDefs[id]?.color ?? .gray)
+                                .frame(width: 30, height: 30)
+                            Image(systemName: tabDefs[id]?.icon ?? "circle")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                        Text(tabDefs[id]?.label ?? id.capitalized)
+                            .foregroundColor(.white)
+                        Spacer()
+                        Image(systemName: "line.3.horizontal")
+                            .foregroundColor(.white.opacity(0.35))
+                    }
+                }
+                .onMove { from, to in
+                    tabIds.move(fromOffsets: from, toOffset: to)
+                    tabOrder = tabIds.joined(separator: ",")
+                }
+            }
+            .listRowBackground(Color.white.opacity(0.10))
+        }
+        .scrollContentBackground(.hidden)
+        .background { gradientManager.gradient.ignoresSafeArea() }
+        .navigationTitle("Tab Order")
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .environment(\.editMode, .constant(.active))
+        .onAppear {
+            let parsed = tabOrder.split(separator: ",").map(String.init)
+            tabIds = parsed.filter { tabDefs[$0] != nil }
+        }
     }
 }
 

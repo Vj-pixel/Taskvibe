@@ -8,6 +8,54 @@ import UniformTypeIdentifiers
 import AudioToolbox
 import PhotosUI
 
+// MARK: - Tag Color Store
+
+struct TagColorStore {
+    static let palette: [(key: String, color: Color)] = [
+        ("red",    .red),
+        ("orange", .orange),
+        ("yellow", .yellow),
+        ("green",  Color(red: 0.2, green: 0.75, blue: 0.3)),
+        ("blue",   .blue),
+        ("purple", .purple),
+        ("pink",   Color(red: 0.9, green: 0.3, blue: 0.5)),
+        ("gray",   Color.white.opacity(0.35))
+    ]
+
+    static func color(for tag: String) -> Color {
+        guard let data = UserDefaults.standard.data(forKey: "tagColors"),
+              let dict = try? JSONDecoder().decode([String: String].self, from: data),
+              let key = dict[tag],
+              let entry = palette.first(where: { $0.key == key }) else {
+            return Color.white.opacity(0.22)
+        }
+        return entry.color
+    }
+
+    static func set(_ colorKey: String, for tag: String) {
+        var dict = all()
+        dict[tag] = colorKey
+        if let data = try? JSONEncoder().encode(dict) {
+            UserDefaults.standard.set(data, forKey: "tagColors")
+        }
+    }
+
+    static func all() -> [String: String] {
+        guard let data = UserDefaults.standard.data(forKey: "tagColors"),
+              let dict = try? JSONDecoder().decode([String: String].self, from: data) else { return [:] }
+        return dict
+    }
+}
+
+// MARK: - Search Scope
+
+enum SearchScope: String, CaseIterable {
+    case all = "All"
+    case today = "Today"
+    case thisWeek = "This Week"
+    case byTag = "By Tag"
+}
+
 // MARK: - StatusRing (progress arc only — icon moved to corner badge)
 
 struct StatusRing: View {
@@ -311,10 +359,10 @@ struct TaskContentView: View {
         if let tag = task.userTag, !tag.isEmpty {
             Text(tag)
                 .font(.caption2.weight(.semibold))
-                .foregroundColor(.white.opacity(0.9))
+                .foregroundColor(.white)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(Color.white.opacity(0.2))
+                .background(TagColorStore.color(for: tag))
                 .clipShape(Capsule())
         }
     }
@@ -660,6 +708,7 @@ struct TaskFormView: View {
     @AppStorage("selectedTheme") private var selectedTheme = "original"
     private var theme: ThemeOption { AppThemes.find(selectedTheme) }
 
+    @State private var showAdvancedOptions = false
     @State private var showEmojiPicker = false
     @State private var selectedPhoto: PhotosPickerItem? = nil
     @State private var attachmentPreview: UIImage? = nil
@@ -669,223 +718,223 @@ struct TaskFormView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+
+                // ── Simple (always visible) ──────────────────────────────
                 Picker("Type", selection: $selectedType) {
                     ForEach(TaskType.allCases, id: \.self) { Text($0.rawValue) }
                 }
                 .pickerStyle(.segmented)
 
-                if selectedType == .habit {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Frequency")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        ForEach(HabitFrequency.allCases, id: \.self) { freq in
-                            Button {
-                                selectedHabitFrequency = freq
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(freq.rawValue).fontWeight(.medium)
-                                        Text(descriptionFor(freq))
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    Spacer()
-                                    if selectedHabitFrequency == freq {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(.accentColor)
-                                    }
-                                }
-                                .padding(10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(selectedHabitFrequency == freq
-                                              ? Color.accentColor.opacity(0.12)
-                                              : Color.clear)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-
-                Text(isEditing ? "Edit Task" : "Add a Task")
-                    .font(.headline)
-
-                if isEditing && selectedType == .task {
-                    HStack {
-                        Text("Status")
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Button(selectedStatus.rawValue) {
-                            let all = TaskStatus.allCases
-                            let idx = all.firstIndex(of: selectedStatus) ?? 0
-                            selectedStatus = all[(idx + 1) % all.count]
-                        }
-                        .buttonStyle(.bordered)
-                    }
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Progress")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Picker("Progress", selection: $selectedProgress) {
-                            Text("0%").tag(0)
-                            Text("25%").tag(25)
-                            Text("50%").tag(50)
-                            Text("75%").tag(75)
-                            Text("100%").tag(100)
-                        }
-                        .pickerStyle(.segmented)
-                        .tint(theme.urgencyColor(for: selectedUrgency))
-                    }
-                }
-
-                TextField("Enter Task", text: $toDoTitle)
+                TextField("Enter task name", text: $toDoTitle)
                     .textFieldStyle(.roundedBorder)
 
-                // Emoji & photo attachment row
-                HStack(spacing: 12) {
-                    Button {
-                        showEmojiPicker.toggle()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text(taskEmoji.isEmpty ? "😊" : taskEmoji)
-                                .font(.system(size: 22))
-                            Text(taskEmoji.isEmpty ? "Add emoji" : "Change emoji")
-                                .font(.caption)
+                DatePicker("Due Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
+
+                // ── Advanced (collapsible) ───────────────────────────────
+                DisclosureGroup(isExpanded: $showAdvancedOptions) {
+                    VStack(spacing: 16) {
+
+                        // Urgency
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Urgency")
+                                .font(.subheadline)
                                 .foregroundColor(.secondary)
+                            Picker("Urgency", selection: $selectedUrgency) {
+                                ForEach(UrgencyLevel.allCases, id: \.self) { Text($0.rawValue) }
+                            }
+                            .pickerStyle(.segmented)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.white.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                    .buttonStyle(.plain)
-                    .popover(isPresented: $showEmojiPicker) {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Pick an emoji").font(.headline).padding(.top, 8)
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 10) {
-                                ForEach(commonEmojis, id: \.self) { emoji in
+
+                        // Habit frequency (only for habits)
+                        if selectedType == .habit {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Frequency")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                ForEach(HabitFrequency.allCases, id: \.self) { freq in
                                     Button {
-                                        taskEmoji = emoji
-                                        showEmojiPicker = false
+                                        selectedHabitFrequency = freq
                                     } label: {
-                                        Text(emoji).font(.system(size: 28))
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(freq.rawValue).fontWeight(.medium)
+                                                Text(descriptionFor(freq))
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            Spacer()
+                                            if selectedHabitFrequency == freq {
+                                                Image(systemName: "checkmark").foregroundColor(.accentColor)
+                                            }
+                                        }
+                                        .padding(10)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(selectedHabitFrequency == freq
+                                                      ? Color.accentColor.opacity(0.12) : Color.clear)
+                                        )
                                     }
                                     .buttonStyle(.plain)
                                 }
                             }
-                            TextField("Custom emoji", text: $taskEmoji)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.title)
-                                .onChange(of: taskEmoji) { _, v in
-                                    if v.count > 2 { taskEmoji = String(v.prefix(2)) }
-                                }
-                            Button("Clear emoji") {
-                                taskEmoji = ""
-                                showEmojiPicker = false
-                            }
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .padding(.bottom, 8)
                         }
-                        .padding(.horizontal)
-                        .frame(minWidth: 260)
-                        .presentationCompactAdaptation(.popover)
-                    }
 
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        HStack(spacing: 6) {
-                            if let preview = attachmentPreview {
-                                Image(uiImage: preview)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 28, height: 28)
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                            } else {
-                                Image(systemName: "photo.badge.plus")
-                                    .font(.system(size: 18))
+                        // Status + Progress (editing tasks only)
+                        if isEditing && selectedType == .task {
+                            HStack {
+                                Text("Status").foregroundColor(.secondary)
+                                Spacer()
+                                Button(selectedStatus.rawValue) {
+                                    let all = TaskStatus.allCases
+                                    let idx = all.firstIndex(of: selectedStatus) ?? 0
+                                    selectedStatus = all[(idx + 1) % all.count]
+                                }
+                                .buttonStyle(.bordered)
                             }
-                            Text(attachmentPreview == nil ? "Add photo" : "Change photo")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Progress").font(.subheadline).foregroundColor(.secondary)
+                                Picker("Progress", selection: $selectedProgress) {
+                                    Text("0%").tag(0); Text("25%").tag(25)
+                                    Text("50%").tag(50); Text("75%").tag(75)
+                                    Text("100%").tag(100)
+                                }
+                                .pickerStyle(.segmented)
+                                .tint(theme.urgencyColor(for: selectedUrgency))
+                            }
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.white.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                    .onChange(of: selectedPhoto) { _, item in
-                        guard let item else { return }
-                        Task {
-                            if let data = try? await item.loadTransferable(type: Data.self),
-                               let image = UIImage(data: data) {
-                                let filename = "task-attach-\(UUID().uuidString).jpg"
-                                let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                                    .appendingPathComponent(filename)
-                                if let jpeg = image.jpegData(compressionQuality: 0.7) {
-                                    try? jpeg.write(to: url)
-                                    await MainActor.run {
-                                        attachmentImagePath = filename
-                                        attachmentPreview = image
+
+                        // Emoji & photo
+                        HStack(spacing: 12) {
+                            Button { showEmojiPicker.toggle() } label: {
+                                HStack(spacing: 6) {
+                                    Text(taskEmoji.isEmpty ? "😊" : taskEmoji).font(.system(size: 22))
+                                    Text(taskEmoji.isEmpty ? "Add emoji" : "Change emoji")
+                                        .font(.caption).foregroundColor(.secondary)
+                                }
+                                .padding(.horizontal, 12).padding(.vertical, 8)
+                                .background(Color.white.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            .buttonStyle(.plain)
+                            .popover(isPresented: $showEmojiPicker) {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text("Pick an emoji").font(.headline).padding(.top, 8)
+                                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 10) {
+                                        ForEach(commonEmojis, id: \.self) { emoji in
+                                            Button { taskEmoji = emoji; showEmojiPicker = false } label: {
+                                                Text(emoji).font(.system(size: 28))
+                                            }.buttonStyle(.plain)
+                                        }
+                                    }
+                                    TextField("Custom emoji", text: $taskEmoji)
+                                        .textFieldStyle(.roundedBorder).font(.title)
+                                        .onChange(of: taskEmoji) { _, v in if v.count > 2 { taskEmoji = String(v.prefix(2)) } }
+                                    Button("Clear emoji") { taskEmoji = ""; showEmojiPicker = false }
+                                        .font(.caption).foregroundColor(.red).padding(.bottom, 8)
+                                }
+                                .padding(.horizontal).frame(minWidth: 260)
+                                .presentationCompactAdaptation(.popover)
+                            }
+
+                            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                                HStack(spacing: 6) {
+                                    if let preview = attachmentPreview {
+                                        Image(uiImage: preview).resizable().scaledToFill()
+                                            .frame(width: 28, height: 28)
+                                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    } else {
+                                        Image(systemName: "photo.badge.plus").font(.system(size: 18))
+                                    }
+                                    Text(attachmentPreview == nil ? "Add photo" : "Change photo")
+                                        .font(.caption).foregroundColor(.secondary)
+                                }
+                                .padding(.horizontal, 12).padding(.vertical, 8)
+                                .background(Color.white.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            .onChange(of: selectedPhoto) { _, item in
+                                guard let item else { return }
+                                Task {
+                                    if let data = try? await item.loadTransferable(type: Data.self),
+                                       let image = UIImage(data: data) {
+                                        let filename = "task-attach-\(UUID().uuidString).jpg"
+                                        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                                            .appendingPathComponent(filename)
+                                        if let jpeg = image.jpegData(compressionQuality: 0.7) {
+                                            try? jpeg.write(to: url)
+                                            await MainActor.run { attachmentImagePath = filename; attachmentPreview = image }
+                                        }
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    if attachmentPreview != nil {
-                        Button {
-                            attachmentPreview = nil
-                            attachmentImagePath = nil
-                            selectedPhoto = nil
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.red.opacity(0.7))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                DatePicker("Due Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
-
-                Picker("Urgency", selection: $selectedUrgency) {
-                    ForEach(UrgencyLevel.allCases, id: \.self) { Text($0.rawValue) }
-                }
-                .pickerStyle(.segmented)
-
-                // Category tag
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Category (optional)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    let suggestions = ["Work", "Personal", "Health", "Study", "Finance", "Fitness"]
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(suggestions, id: \.self) { s in
+                            if attachmentPreview != nil {
                                 Button {
-                                    userTag = userTag == s ? "" : s
+                                    attachmentPreview = nil; attachmentImagePath = nil; selectedPhoto = nil
                                 } label: {
-                                    Text(s)
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundColor(userTag == s ? .white : .accentColor)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 5)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(userTag == s ? Color.accentColor : Color.accentColor.opacity(0.12))
-                                        )
+                                    Image(systemName: "xmark.circle.fill").foregroundColor(.red.opacity(0.7))
+                                }.buttonStyle(.plain)
+                            }
+                        }
+
+                        // Category tag
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Category (optional)")
+                                .font(.subheadline).foregroundColor(.secondary)
+                            let suggestions = ["Work", "Personal", "Health", "Study", "Finance", "Fitness"]
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(suggestions, id: \.self) { s in
+                                        let tagColor = TagColorStore.color(for: s)
+                                        Button { userTag = userTag == s ? "" : s } label: {
+                                            Text(s)
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 10).padding(.vertical, 5)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 8)
+                                                        .fill(userTag == s ? tagColor : tagColor.opacity(0.3))
+                                                )
+                                        }.buttonStyle(.plain)
+                                    }
                                 }
-                                .buttonStyle(.plain)
+                            }
+                            TextField("Or type a custom tag…", text: $userTag)
+                                .textFieldStyle(.roundedBorder).font(.callout)
+
+                            // Color picker for the current tag
+                            if !userTag.isEmpty {
+                                HStack(spacing: 10) {
+                                    Text("Tag color:").font(.caption2).foregroundColor(.secondary)
+                                    ForEach(TagColorStore.palette, id: \.key) { entry in
+                                        let isCurrent = TagColorStore.all()[userTag] == entry.key
+                                        Button {
+                                            TagColorStore.set(entry.key, for: userTag)
+                                        } label: {
+                                            Circle()
+                                                .fill(entry.color)
+                                                .frame(width: 22, height: 22)
+                                                .overlay(Circle().stroke(Color.white, lineWidth: isCurrent ? 2.5 : 0))
+                                                .shadow(color: .black.opacity(0.2), radius: 2)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.top, 4)
                             }
                         }
                     }
-                    TextField("Or type a custom tag…", text: $userTag)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.callout)
+                    .padding(.top, 8)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "slider.horizontal.3")
+                        Text("Advanced Options")
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.secondary)
                 }
 
+                // ── Actions ──────────────────────────────────────────────
                 FormActionButton(title: isEditing ? "Update" : "Add",
                                 colors: [theme.accentColor, theme.color2, theme.color3]) {
                     handleSave()
@@ -903,7 +952,7 @@ struct TaskFormView: View {
             .padding(.bottom, 16)
         }
         .onAppear {
-            // Restore preview image when editing an existing task
+            if isEditing { showAdvancedOptions = true }
             if let path = attachmentImagePath {
                 let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
                     .appendingPathComponent(path)
@@ -1064,7 +1113,6 @@ struct TasksView: View {
     @State private var selectedProgress: Int = 0
     @State private var selectedType: TaskType = .task
     @State private var selectedHabitFrequency: HabitFrequency = .daily
-    @State private var isCanvasImportShowing = false
     @State private var habitDeleteTarget: Daypilot? = nil
     @State private var showHabitDeleteDialog = false
     @State private var formEmoji: String = ""
@@ -1074,6 +1122,8 @@ struct TasksView: View {
     @State private var selectedTagFilter: String? = nil
     @State private var isPomodoroShowing = false
     @State private var pomodoroTask: Daypilot? = nil
+    @State private var searchScope: SearchScope = .all
+    @AppStorage("pomodoroPlacement") private var pomodoroPlacement = "corner"
 
     var body: some View {
         NavigationStack {
@@ -1137,7 +1187,8 @@ struct TasksView: View {
                 tasksByDay: tasksByDay
             )
 
-            if !allUserTags.isEmpty {
+            searchScopeBar
+            if searchScope == .byTag || searchScope == .all, !allUserTags.isEmpty {
                 tagFilterBar
             }
 
@@ -1152,21 +1203,15 @@ struct TasksView: View {
         .toolbarColorScheme(.dark)
         .searchable(text: $searchText, prompt: "Search tasks & habits")
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    isCanvasImportShowing = true
-                } label: {
-                    Image(systemName: "books.vertical")
-                        .foregroundColor(.white)
-                }
-            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 14) {
-                    Button {
-                        isPomodoroShowing = true
-                    } label: {
-                        Image(systemName: "timer")
-                            .foregroundColor(.white)
+                    if pomodoroPlacement == "corner" {
+                        Button {
+                            isPomodoroShowing = true
+                        } label: {
+                            Image(systemName: "timer")
+                                .foregroundColor(.white)
+                        }
                     }
                     AddTaskButton {
                         resetForm()
@@ -1184,10 +1229,6 @@ struct TasksView: View {
             editTaskSheet
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $isCanvasImportShowing) {
-            CanvasView()
-                .environmentObject(gradientManager)
         }
         .sheet(isPresented: $isPomodoroShowing) {
             PomodoroView(linkedTask: pomodoroTask)
@@ -1217,33 +1258,55 @@ struct TasksView: View {
         filteredAndSortedDaypilots.isEmpty && disappearingTaskID == nil
     }
 
+    private var searchScopeBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(SearchScope.allCases, id: \.self) { scope in
+                    Button {
+                        searchScope = scope
+                        if scope != .byTag { selectedTagFilter = nil }
+                    } label: {
+                        Text(scope.rawValue)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(searchScope == scope ? .black : .white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(searchScope == scope ? Color.white : Color.white.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+        }
+    }
+
     private var tagFilterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                Button {
-                    selectedTagFilter = nil
-                } label: {
-                    Text("All")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(selectedTagFilter == nil ? .black : .white)
+                ForEach(allUserTags, id: \.self) { tag in
+                    let tagColor = TagColorStore.color(for: tag)
+                    let isSelected = selectedTagFilter == tag
+                    Button {
+                        selectedTagFilter = isSelected ? nil : tag
+                    } label: {
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(tagColor)
+                                .frame(width: 8, height: 8)
+                            Text(tag)
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.white)
+                        }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(selectedTagFilter == nil ? Color.white : Color.white.opacity(0.15))
+                        .background(isSelected ? tagColor.opacity(0.5) : Color.white.opacity(0.15))
+                        .overlay(
+                            Capsule()
+                                .stroke(isSelected ? tagColor : Color.clear, lineWidth: 1.5)
+                        )
                         .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-
-                ForEach(allUserTags, id: \.self) { tag in
-                    Button {
-                        selectedTagFilter = selectedTagFilter == tag ? nil : tag
-                    } label: {
-                        Text(tag)
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(selectedTagFilter == tag ? .black : .white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(selectedTagFilter == tag ? Color.white : Color.white.opacity(0.15))
-                            .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
                 }
@@ -1319,16 +1382,36 @@ struct TasksView: View {
             base = base.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
         }
 
-        // User-tag filter
-        if let tag = selectedTagFilter {
-            base = base.filter { $0.userTag == tag }
+        // Search scope filter
+        let cal = Calendar.current
+        switch searchScope {
+        case .today:
+            base = base.filter { task in
+                guard let due = task.dueDate else { return false }
+                return cal.isDateInToday(due)
+            }
+        case .thisWeek:
+            let weekOut = cal.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+            base = base.filter { task in
+                guard let due = task.dueDate else { return false }
+                return due >= cal.startOfDay(for: Date()) && due <= weekOut
+            }
+        case .byTag:
+            if let tag = selectedTagFilter {
+                base = base.filter { $0.userTag == tag }
+            }
+        case .all:
+            // User-tag filter still applies when not in byTag scope
+            if let tag = selectedTagFilter {
+                base = base.filter { $0.userTag == tag }
+            }
         }
 
         if let day = selectedCalendarDate {
             return base.filter { task in
                 if task.type == .habit { return habitOccursOn(task, date: day) }
                 guard let due = task.dueDate else { return false }
-                return Calendar.current.isDate(due, inSameDayAs: day)
+                return cal.isDate(due, inSameDayAs: day)
             }
         }
         return base.sorted { !$0.isCompleted && $1.isCompleted }
