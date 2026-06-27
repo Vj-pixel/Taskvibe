@@ -201,6 +201,7 @@ struct TaskContentView: View {
                     Text(task.title)
                         .font(.headline)
                     sourceTagBadge
+                    userTagBadge
                 }
 
                 let displayDate = (task.type == .habit ? occurrenceDate : nil) ?? task.dueDate
@@ -304,6 +305,19 @@ struct TaskContentView: View {
     }
 
     private var ringColor: Color { AppThemes.find(selectedTheme).urgencyColor(for: task.urgency) }
+
+    @ViewBuilder
+    private var userTagBadge: some View {
+        if let tag = task.userTag, !tag.isEmpty {
+            Text(tag)
+                .font(.caption2.weight(.semibold))
+                .foregroundColor(.white.opacity(0.9))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.white.opacity(0.2))
+                .clipShape(Capsule())
+        }
+    }
 
     @ViewBuilder
     private var sourceTagBadge: some View {
@@ -637,6 +651,7 @@ struct TaskFormView: View {
     @Binding var selectedProgress: Int
     @Binding var taskEmoji: String
     @Binding var attachmentImagePath: String?
+    @Binding var userTag: String
 
     var onSave: () -> Void
     var isEditing: Bool = false
@@ -840,6 +855,37 @@ struct TaskFormView: View {
                 }
                 .pickerStyle(.segmented)
 
+                // Category tag
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Category (optional)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    let suggestions = ["Work", "Personal", "Health", "Study", "Finance", "Fitness"]
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(suggestions, id: \.self) { s in
+                                Button {
+                                    userTag = userTag == s ? "" : s
+                                } label: {
+                                    Text(s)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(userTag == s ? .white : .accentColor)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 5)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(userTag == s ? Color.accentColor : Color.accentColor.opacity(0.12))
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    TextField("Or type a custom tag…", text: $userTag)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.callout)
+                }
+
                 FormActionButton(title: isEditing ? "Update" : "Add",
                                 colors: [theme.accentColor, theme.color2, theme.color3]) {
                     handleSave()
@@ -1023,6 +1069,11 @@ struct TasksView: View {
     @State private var showHabitDeleteDialog = false
     @State private var formEmoji: String = ""
     @State private var formAttachmentImagePath: String? = nil
+    @State private var formUserTag: String = ""
+    @State private var searchText: String = ""
+    @State private var selectedTagFilter: String? = nil
+    @State private var isPomodoroShowing = false
+    @State private var pomodoroTask: Daypilot? = nil
 
     var body: some View {
         NavigationStack {
@@ -1086,6 +1137,10 @@ struct TasksView: View {
                 tasksByDay: tasksByDay
             )
 
+            if !allUserTags.isEmpty {
+                tagFilterBar
+            }
+
             if shouldShowEmptyState {
                 emptyStateView
             } else {
@@ -1095,6 +1150,7 @@ struct TasksView: View {
         .navigationTitle("Today's Tasks")
         .navigationBarTitleDisplayMode(.large)
         .toolbarColorScheme(.dark)
+        .searchable(text: $searchText, prompt: "Search tasks & habits")
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
@@ -1105,9 +1161,17 @@ struct TasksView: View {
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                AddTaskButton {
-                    resetForm()
-                    isSheetShowing.toggle()
+                HStack(spacing: 14) {
+                    Button {
+                        isPomodoroShowing = true
+                    } label: {
+                        Image(systemName: "timer")
+                            .foregroundColor(.white)
+                    }
+                    AddTaskButton {
+                        resetForm()
+                        isSheetShowing.toggle()
+                    }
                 }
             }
         }
@@ -1124,6 +1188,11 @@ struct TasksView: View {
         .sheet(isPresented: $isCanvasImportShowing) {
             CanvasView()
                 .environmentObject(gradientManager)
+        }
+        .sheet(isPresented: $isPomodoroShowing) {
+            PomodoroView(linkedTask: pomodoroTask)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
         }
         .confirmationDialog(
             "Remove this habit?",
@@ -1146,6 +1215,42 @@ struct TasksView: View {
 
     private var shouldShowEmptyState: Bool {
         filteredAndSortedDaypilots.isEmpty && disappearingTaskID == nil
+    }
+
+    private var tagFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                Button {
+                    selectedTagFilter = nil
+                } label: {
+                    Text("All")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(selectedTagFilter == nil ? .black : .white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(selectedTagFilter == nil ? Color.white : Color.white.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+
+                ForEach(allUserTags, id: \.self) { tag in
+                    Button {
+                        selectedTagFilter = selectedTagFilter == tag ? nil : tag
+                    } label: {
+                        Text(tag)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(selectedTagFilter == tag ? .black : .white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(selectedTagFilter == tag ? Color.white : Color.white.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
     }
 
     private var emptyStateView: some View {
@@ -1207,17 +1312,30 @@ struct TasksView: View {
     }
 
     private var filteredAndSortedDaypilots: [Daypilot] {
-        let base = daypilots.filter { !$0.isCompleted || $0.uuid == disappearingTaskID }
+        var base = daypilots.filter { !$0.isCompleted || $0.uuid == disappearingTaskID }
+
+        // Search filter
+        if !searchText.isEmpty {
+            base = base.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+        }
+
+        // User-tag filter
+        if let tag = selectedTagFilter {
+            base = base.filter { $0.userTag == tag }
+        }
+
         if let day = selectedCalendarDate {
             return base.filter { task in
-                if task.type == .habit {
-                    return habitOccursOn(task, date: day)
-                }
+                if task.type == .habit { return habitOccursOn(task, date: day) }
                 guard let due = task.dueDate else { return false }
                 return Calendar.current.isDate(due, inSameDayAs: day)
             }
         }
         return base.sorted { !$0.isCompleted && $1.isCompleted }
+    }
+
+    private var allUserTags: [String] {
+        Array(Set(daypilots.compactMap(\.userTag).filter { !$0.isEmpty })).sorted()
     }
 
     private var addTaskSheet: some View {
@@ -1233,6 +1351,7 @@ struct TasksView: View {
             selectedProgress: $selectedProgress,
             taskEmoji: $formEmoji,
             attachmentImagePath: $formAttachmentImagePath,
+            userTag: $formUserTag,
             onSave: addTask
         )
     }
@@ -1250,6 +1369,7 @@ struct TasksView: View {
             selectedProgress: $selectedProgress,
             taskEmoji: $formEmoji,
             attachmentImagePath: $formAttachmentImagePath,
+            userTag: $formUserTag,
             onSave: updateTask,
             isEditing: true,
             task: editingTask
@@ -1318,6 +1438,7 @@ struct TasksView: View {
         selectedHabitFrequency = task.habitFrequency
         formEmoji = task.taskEmoji ?? ""
         formAttachmentImagePath = task.attachmentImagePath
+        formUserTag = task.userTag ?? ""
         isEditingSheetShowing = true
     }
 
@@ -1332,6 +1453,7 @@ struct TasksView: View {
         selectedHabitFrequency = .daily
         formEmoji = ""
         formAttachmentImagePath = nil
+        formUserTag = ""
     }
 
     private func addTask() {
@@ -1351,6 +1473,7 @@ struct TasksView: View {
         )
         if !formEmoji.isEmpty { newTask.taskEmoji = formEmoji }
         newTask.attachmentImagePath = formAttachmentImagePath
+        newTask.userTag = formUserTag.isEmpty ? nil : formUserTag
         modelContext.insert(newTask)
         do {
             try modelContext.save()
@@ -1374,6 +1497,7 @@ struct TasksView: View {
         task.habitFrequency = selectedHabitFrequency
         task.taskEmoji = formEmoji.isEmpty ? nil : formEmoji
         task.attachmentImagePath = formAttachmentImagePath
+        task.userTag = formUserTag.isEmpty ? nil : formUserTag
         do {
             try modelContext.save()
             scheduleHabitNotifications(for: task)

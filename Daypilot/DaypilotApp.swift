@@ -148,6 +148,9 @@ class Daypilot: Identifiable {
     // Source label for imported tasks (e.g., "Canvas", "Calendar")
     var sourceTag: String? = nil
 
+    // User-defined category tag (e.g., "Work", "Health", "Personal")
+    var userTag: String? = nil
+
     // Emoji or image customization
     var taskEmoji: String? = nil
     var attachmentImagePath: String? = nil   // filename relative to Documents dir
