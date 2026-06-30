@@ -6,19 +6,24 @@ import AudioToolbox
 struct PomodoroView: View {
     var linkedTask: Daypilot? = nil
 
+    @AppStorage("pomodoroFocusMinutes")      private var focusMinutes      = 25
+    @AppStorage("pomodoroShortBreakMinutes") private var shortBreakMinutes = 5
+    @AppStorage("pomodoroLongBreakMinutes")  private var longBreakMinutes  = 15
+    @AppStorage("selectedTheme")             private var selectedTheme     = "original"
+
     @State private var totalSeconds: Int = 25 * 60
-    @State private var secondsLeft: Int = 25 * 60
-    @State private var isRunning = false
-    @State private var sessionLabel = "Focus"
-    @AppStorage("selectedTheme") private var selectedTheme = "original"
+    @State private var secondsLeft: Int  = 25 * 60
+    @State private var isRunning         = false
+    @State private var sessionLabel      = "Focus"
+    @State private var showSettings      = false
 
     private var theme: ThemeOption { AppThemes.find(selectedTheme) }
 
-    private let presets: [(label: String, minutes: Int)] = [
-        ("Focus", 25), ("Short Break", 5), ("Long Break", 15)
-    ]
+    private var presets: [(label: String, minutes: Int)] {
+        [("Focus", focusMinutes), ("Short Break", shortBreakMinutes), ("Long Break", longBreakMinutes)]
+    }
 
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
@@ -28,16 +33,30 @@ struct PomodoroView: View {
 
             VStack(spacing: 28) {
                 // Header
-                VStack(spacing: 4) {
-                    Text("Focus Timer")
-                        .font(.title2.weight(.bold))
-                        .foregroundColor(.white)
-                    if let task = linkedTask {
-                        Text(task.title)
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.75))
-                            .lineLimit(1)
+                HStack {
+                    Spacer()
+                    VStack(spacing: 4) {
+                        Text("Focus Timer")
+                            .font(.title2.weight(.bold))
+                            .foregroundColor(.white)
+                        if let task = linkedTask {
+                            Text(task.title)
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.75))
+                                .lineLimit(1)
+                        }
                     }
+                    Spacer()
+                    Button { showSettings = true } label: {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.7))
+                            .frame(width: 36, height: 36)
+                            .background(Color.white.opacity(0.15))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 20)
                 }
 
                 // Preset chips
@@ -45,9 +64,7 @@ struct PomodoroView: View {
                     ForEach(presets, id: \.label) { preset in
                         Button {
                             guard !isRunning else { return }
-                            sessionLabel = preset.label
-                            totalSeconds = preset.minutes * 60
-                            secondsLeft = preset.minutes * 60
+                            switchTo(preset)
                         } label: {
                             Text(preset.label)
                                 .font(.caption.weight(.semibold))
@@ -103,9 +120,7 @@ struct PomodoroView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Button {
-                        isRunning.toggle()
-                    } label: {
+                    Button { isRunning.toggle() } label: {
                         Image(systemName: isRunning ? "pause.fill" : "play.fill")
                             .font(.system(size: 26, weight: .bold))
                             .foregroundColor(theme.color1)
@@ -116,12 +131,8 @@ struct PomodoroView: View {
                     .buttonStyle(.plain)
 
                     Button {
-                        // Skip to next session
                         let idx = presets.firstIndex(where: { $0.label == sessionLabel }) ?? 0
-                        let next = presets[(idx + 1) % presets.count]
-                        sessionLabel = next.label
-                        totalSeconds = next.minutes * 60
-                        secondsLeft = next.minutes * 60
+                        switchTo(presets[(idx + 1) % presets.count])
                         isRunning = false
                     } label: {
                         Image(systemName: "forward.fill")
@@ -136,14 +147,70 @@ struct PomodoroView: View {
             }
             .padding(.vertical, 32)
         }
-        .onReceive(timer) { _ in
+        .onReceive(ticker) { _ in
             guard isRunning, secondsLeft > 0 else {
                 if isRunning && secondsLeft == 0 { handleTimerEnd() }
                 return
             }
             secondsLeft -= 1
         }
+        .sheet(isPresented: $showSettings) {
+            timerSettingsSheet
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
     }
+
+    // MARK: - Timer Settings Sheet
+
+    private var timerSettingsSheet: some View {
+        ZStack {
+            LinearGradient(colors: [theme.color1, theme.color2, theme.color3],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                .ignoresSafeArea()
+
+            VStack(spacing: 24) {
+                Text("Timer Durations")
+                    .font(.title3.weight(.bold))
+                    .foregroundColor(.white)
+                    .padding(.top, 8)
+
+                VStack(spacing: 16) {
+                    timerRow(label: "Focus", icon: "brain.head.profile", minutes: $focusMinutes, range: 1...90)
+                    timerRow(label: "Short Break", icon: "cup.and.saucer.fill", minutes: $shortBreakMinutes, range: 1...30)
+                    timerRow(label: "Long Break", icon: "moon.fill", minutes: $longBreakMinutes, range: 1...60)
+                }
+                .padding(.horizontal, 24)
+
+                Text("Changes take effect when you switch presets.")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.5))
+
+                Spacer()
+            }
+        }
+    }
+
+    private func timerRow(label: String, icon: String, minutes: Binding<Int>, range: ClosedRange<Int>) -> some View {
+        HStack {
+            Label(label, systemImage: icon)
+                .foregroundColor(.white)
+                .font(.subheadline.weight(.medium))
+            Spacer()
+            Stepper("\(minutes.wrappedValue) min", value: minutes, in: range)
+                .foregroundColor(.white)
+                .labelsHidden()
+            Text("\(minutes.wrappedValue) min")
+                .foregroundColor(.white.opacity(0.85))
+                .font(.subheadline.weight(.semibold))
+                .frame(width: 54, alignment: .trailing)
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    // MARK: - Helpers
 
     private var progress: Double {
         guard totalSeconds > 0 else { return 0 }
@@ -151,19 +218,19 @@ struct PomodoroView: View {
     }
 
     private var timeString: String {
-        let m = secondsLeft / 60
-        let s = secondsLeft % 60
-        return String(format: "%02d:%02d", m, s)
+        String(format: "%02d:%02d", secondsLeft / 60, secondsLeft % 60)
+    }
+
+    private func switchTo(_ preset: (label: String, minutes: Int)) {
+        sessionLabel  = preset.label
+        totalSeconds  = preset.minutes * 60
+        secondsLeft   = preset.minutes * 60
     }
 
     private func handleTimerEnd() {
         isRunning = false
-        AudioServicesPlaySystemSound(1005) // chime
-        // Auto-advance to next preset
-        let idx = presets.firstIndex(where: { $0.label == sessionLabel }) ?? 0
-        let next = presets[(idx + 1) % presets.count]
-        sessionLabel = next.label
-        totalSeconds = next.minutes * 60
-        secondsLeft = next.minutes * 60
+        AudioServicesPlaySystemSound(1005)
+        let idx  = presets.firstIndex(where: { $0.label == sessionLabel }) ?? 0
+        switchTo(presets[(idx + 1) % presets.count])
     }
 }

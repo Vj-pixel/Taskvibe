@@ -8,6 +8,19 @@ import UniformTypeIdentifiers
 import AudioToolbox
 import PhotosUI
 
+// MARK: - Glass TextField Style
+
+extension View {
+    func glassFieldStyle(cornerRadius: CGFloat = 12) -> some View {
+        self
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: cornerRadius).stroke(Color.white.opacity(0.18), lineWidth: 1))
+    }
+}
+
 // MARK: - Tag Color Store
 
 struct TagColorStore {
@@ -726,7 +739,7 @@ struct TaskFormView: View {
                 .pickerStyle(.segmented)
 
                 TextField("Enter task name", text: $toDoTitle)
-                    .textFieldStyle(.roundedBorder)
+                    .glassFieldStyle()
 
                 DatePicker("Due Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
 
@@ -827,7 +840,7 @@ struct TaskFormView: View {
                                         }
                                     }
                                     TextField("Custom emoji", text: $taskEmoji)
-                                        .textFieldStyle(.roundedBorder).font(.title)
+                                        .glassFieldStyle().font(.title)
                                         .onChange(of: taskEmoji) { _, v in if v.count > 2 { taskEmoji = String(v.prefix(2)) } }
                                     Button("Clear emoji") { taskEmoji = ""; showEmojiPicker = false }
                                         .font(.caption).foregroundColor(.red).padding(.bottom, 8)
@@ -900,7 +913,7 @@ struct TaskFormView: View {
                                 }
                             }
                             TextField("Or type a custom tag…", text: $userTag)
-                                .textFieldStyle(.roundedBorder).font(.callout)
+                                .glassFieldStyle().font(.callout)
 
                             // Color picker for the current tag
                             if !userTag.isEmpty {
@@ -1118,6 +1131,7 @@ struct TasksView: View {
     @State private var formEmoji: String = ""
     @State private var formAttachmentImagePath: String? = nil
     @State private var formUserTag: String = ""
+    @State private var isSearching: Bool = false
     @State private var searchText: String = ""
     @State private var selectedTagFilter: String? = nil
     @State private var isPomodoroShowing = false
@@ -1187,9 +1201,36 @@ struct TasksView: View {
                 tasksByDay: tasksByDay
             )
 
-            searchScopeBar
-            if searchScope == .byTag || searchScope == .all, !allUserTags.isEmpty {
-                tagFilterBar
+            // Inline search bar (only when active)
+            if isSearching {
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.white.opacity(0.5))
+                    TextField("Search tasks & habits", text: $searchText)
+                        .foregroundColor(.white)
+                        .autocorrectionDisabled()
+                        .submitLabel(.search)
+                    if !searchText.isEmpty {
+                        Button { searchText = "" } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.white.opacity(0.5))
+                        }.buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.18), lineWidth: 1))
+                .padding(.horizontal, 16)
+                .padding(.bottom, 4)
+                .transition(.move(edge: .top).combined(with: .opacity))
+
+                searchScopeBar
+
+                if searchScope == .byTag || searchScope == .all, !allUserTags.isEmpty {
+                    tagFilterBar
+                }
             }
 
             if shouldShowEmptyState {
@@ -1201,16 +1242,21 @@ struct TasksView: View {
         .navigationTitle("Today's Tasks")
         .navigationBarTitleDisplayMode(.large)
         .toolbarColorScheme(.dark)
-        .searchable(text: $searchText, prompt: "Search tasks & habits")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 14) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            isSearching.toggle()
+                            if !isSearching { searchText = ""; searchScope = .all; selectedTagFilter = nil }
+                        }
+                    } label: {
+                        Image(systemName: isSearching ? "xmark" : "magnifyingglass")
+                            .foregroundColor(.white)
+                    }
                     if pomodoroPlacement == "corner" {
-                        Button {
-                            isPomodoroShowing = true
-                        } label: {
-                            Image(systemName: "timer")
-                                .foregroundColor(.white)
+                        Button { isPomodoroShowing = true } label: {
+                            Image(systemName: "timer").foregroundColor(.white)
                         }
                     }
                     AddTaskButton {

@@ -226,6 +226,7 @@ struct SettingsView: View {
 struct TabOrderView: View {
     @Binding var tabOrder: String
     @EnvironmentObject private var gradientManager: SunsetGradientManager
+    @AppStorage("pomodoroPlacement") private var pomodoroPlacement = "corner"
     @State private var tabIds: [String] = []
 
     private let tabDefs: [String: (label: String, icon: String, color: Color)] = [
@@ -270,7 +271,14 @@ struct TabOrderView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .environment(\.editMode, .constant(.active))
         .onAppear {
-            let parsed = tabOrder.split(separator: ",").map(String.init)
+            var parsed = tabOrder.split(separator: ",").map(String.init)
+            // Include focus tab in the reorder list when it's set as a dedicated tab
+            if pomodoroPlacement == "tab" && !parsed.contains("focus") {
+                parsed.append("focus")
+                tabOrder = parsed.joined(separator: ",")
+            } else if pomodoroPlacement != "tab" {
+                parsed.removeAll { $0 == "focus" }
+            }
             tabIds = parsed.filter { tabDefs[$0] != nil }
         }
     }
