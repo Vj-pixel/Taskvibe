@@ -7,6 +7,18 @@ import UserNotifications
 import UniformTypeIdentifiers
 import AudioToolbox
 import PhotosUI
+import WidgetKit
+
+// MARK: - Haptic Engine
+
+struct HapticEngine {
+    static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        UIImpactFeedbackGenerator(style: style).impactOccurred()
+    }
+    static func notification(_ type: UINotificationFeedbackGenerator.FeedbackType) {
+        UINotificationFeedbackGenerator().notificationOccurred(type)
+    }
+}
 
 // MARK: - Glass TextField Style
 
@@ -480,6 +492,10 @@ struct DraggableTaskView: View {
         } message: {
             Text("This habit isn't available yet. Check back next time!")
         }
+        .onChange(of: readyToDelete)   { _, v in if v { HapticEngine.impact(.rigid) } }
+        .onChange(of: readyToComplete) { _, v in if v { HapticEngine.impact(.medium) } }
+        .onChange(of: readyToEdit)     { _, v in if v { HapticEngine.impact(.light) } }
+        .onChange(of: readyToShare)    { _, v in if v { HapticEngine.impact(.soft) } }
     }
 
     private var anyActionReady: Bool {
@@ -559,9 +575,8 @@ struct DraggableTaskView: View {
     }
 
     private func performDeleteAction() {
-        // Play system trash sound
+        HapticEngine.notification(.error)
         AudioServicesPlaySystemSound(1117)
-        // Animate card shrinking and flying off
         withAnimation(.easeIn(duration: 0.30)) {
             isBeingDeleted = true
             dragOffset = CGSize(width: -450, height: dragOffset.height)
@@ -570,6 +585,7 @@ struct DraggableTaskView: View {
     }
 
     private func performCompleteAction() {
+        HapticEngine.notification(.success)
         withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
             dragOffset = CGSize(width: 450, height: dragOffset.height)
         }
@@ -1097,6 +1113,134 @@ struct MiniCalendarStrip: View {
     }
 }
 
+// MARK: - Confetti
+
+private struct ConfettiPieceView: View {
+    let x: CGFloat
+    let color: Color
+    let size: CGFloat
+    let speed: Double
+    let delay: Double
+    let totalSpin: Double
+    let screenHeight: CGFloat
+
+    @State private var y: CGFloat = -30
+    @State private var rotation: Double = 0
+    @State private var opacity: Double = 1.0
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 3)
+            .fill(color)
+            .frame(width: size, height: size * 1.5)
+            .rotationEffect(.degrees(rotation))
+            .position(x: x, y: y)
+            .opacity(opacity)
+            .onAppear {
+                withAnimation(.easeIn(duration: speed).delay(delay)) {
+                    y = screenHeight + 40
+                    rotation = totalSpin
+                }
+                withAnimation(.linear(duration: 0.35).delay(delay + speed * 0.72)) {
+                    opacity = 0
+                }
+            }
+    }
+}
+
+struct ConfettiView: View {
+    var count: Int = 55
+    private let palette: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .pink, .white]
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(0..<count, id: \.self) { i in
+                    ConfettiPieceView(
+                        x: CGFloat.random(in: 0...geo.size.width),
+                        color: palette[i % palette.count],
+                        size: CGFloat.random(in: 6...14),
+                        speed: Double.random(in: 0.9...1.6),
+                        delay: Double.random(in: 0...0.45),
+                        totalSpin: Double.random(in: 200...420),
+                        screenHeight: geo.size.height
+                    )
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Celebration Overlay
+
+struct CelebrationOverlay: View {
+    let streak: Int
+    let habitName: String
+    let onDismiss: () -> Void
+
+    @State private var cardScale: CGFloat = 0.65
+    @State private var cardOpacity: Double = 0
+
+    private var milestoneEmoji: String {
+        switch streak {
+        case 3:   return "🌱"
+        case 7:   return "🔥"
+        case 14:  return "💪"
+        case 30:  return "⭐"
+        case 60:  return "🌟"
+        case 100: return "💎"
+        case 365: return "🏆"
+        default:  return "🔥"
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.55)
+                .ignoresSafeArea()
+                .onTapGesture { onDismiss() }
+
+            ConfettiView(count: 60)
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                Text(milestoneEmoji)
+                    .font(.system(size: 72))
+                Text("\(streak)")
+                    .font(.system(size: 82, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                Text("Day Streak!")
+                    .font(.title.weight(.bold))
+                    .foregroundColor(.white)
+                if !habitName.isEmpty {
+                    Text(habitName)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.72))
+                }
+                Text("Tap anywhere to continue")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.45))
+                    .padding(.top, 6)
+            }
+            .padding(40)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 30))
+            .shadow(color: .black.opacity(0.35), radius: 32, x: 0, y: 12)
+            .scaleEffect(cardScale)
+            .opacity(cardOpacity)
+            .padding(.horizontal, 28)
+        }
+        .onAppear {
+            HapticEngine.notification(.success)
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.68)) {
+                cardScale = 1.0
+                cardOpacity = 1.0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) { onDismiss() }
+        }
+    }
+}
+
 // MARK: - Main Tasks View
 
 struct TasksView: View {
@@ -1139,11 +1283,24 @@ struct TasksView: View {
     @State private var searchScope: SearchScope = .all
     @AppStorage("pomodoroPlacement") private var pomodoroPlacement = "corner"
 
+    // Streak celebration
+    @State private var streakMilestone: Int? = nil
+    @State private var celebrationHabitName: String = ""
+
     var body: some View {
         NavigationStack {
             ZStack {
                 backgroundGradient.ignoresSafeArea()
                 mainContent
+            }
+        }
+        .overlay {
+            if let milestone = streakMilestone {
+                CelebrationOverlay(streak: milestone, habitName: celebrationHabitName) {
+                    withAnimation(.easeOut(duration: 0.22)) { streakMilestone = nil }
+                }
+                .transition(.opacity)
+                .zIndex(100)
             }
         }
         .onAppear {
@@ -1270,16 +1427,19 @@ struct TasksView: View {
             addTaskSheet
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
         }
         .sheet(isPresented: $isEditingSheetShowing) {
             editTaskSheet
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
         }
         .sheet(isPresented: $isPomodoroShowing) {
             PomodoroView(linkedTask: pomodoroTask)
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
         }
         .confirmationDialog(
             "Remove this habit?",
@@ -1510,11 +1670,20 @@ struct TasksView: View {
     private func markTaskDone(_ task: Daypilot) {
         withAnimation {
             if task.type == .habit {
-                task.streakCount = HabitScheduler.updatedStreak(for: task)
+                let newStreak = HabitScheduler.updatedStreak(for: task)
+                task.streakCount = newStreak
                 task.lastCompletedDate = Date()
                 task.isCompleted = false
                 cancelNotification(for: task)
                 scheduleHabitNotifications(for: task)
+                HapticEngine.impact(.heavy)
+                let milestones = [3, 7, 14, 30, 60, 100, 365]
+                if milestones.contains(newStreak) {
+                    celebrationHabitName = task.title
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        withAnimation { streakMilestone = newStreak }
+                    }
+                }
             } else {
                 task.isCompleted = true
                 disappearingTaskID = task.uuid
@@ -1522,6 +1691,7 @@ struct TasksView: View {
             }
             try? modelContext.save()
         }
+        writeWidgetSnapshot()
 
         if task.type == .task {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -1545,6 +1715,7 @@ struct TasksView: View {
             modelContext.delete(task)
             try? modelContext.save()
         }
+        writeWidgetSnapshot()
     }
 
     private func skipHabitToday(_ task: Daypilot) {
@@ -1609,6 +1780,8 @@ struct TasksView: View {
             scheduleHabitNotifications(for: newTask)
             newTaskIDs.insert(newTask.uuid)
             isSheetShowing = false
+            HapticEngine.impact(.light)
+            writeWidgetSnapshot()
         } catch {
             print("Failed to save new task: \(error)")
         }
@@ -1632,6 +1805,8 @@ struct TasksView: View {
             scheduleHabitNotifications(for: task)
             isEditingSheetShowing = false
             editingTask = nil
+            HapticEngine.impact(.light)
+            writeWidgetSnapshot()
         } catch {
             print("Failed to update task: \(error)")
         }
@@ -1656,5 +1831,26 @@ struct TasksView: View {
 
     private func cancelNotification(for task: Daypilot) {
         HabitScheduler.cancel(task)
+    }
+
+    // MARK: - Widget Snapshot
+
+    private func writeWidgetSnapshot() {
+        guard let defaults = UserDefaults(suiteName: "group.com.daypilot.shared") else { return }
+        let todayTasksJSON = daypilots
+            .filter { !$0.isCompleted && $0.type == .task }
+            .prefix(5)
+            .map { ["title": $0.title, "urgency": $0.urgency.rawValue, "emoji": $0.taskEmoji ?? ""] }
+        let bestStreak = daypilots.filter { $0.type == .habit }.map(\.streakCount).max() ?? 0
+        let habitsDoneToday = daypilots.filter {
+            $0.type == .habit && Calendar.current.isDateInToday($0.lastCompletedDate ?? .distantPast)
+        }.count
+        if let data = try? JSONSerialization.data(withJSONObject: todayTasksJSON) {
+            defaults.set(data, forKey: "widgetTasks")
+        }
+        defaults.set(bestStreak, forKey: "widgetBestStreak")
+        defaults.set(habitsDoneToday, forKey: "widgetHabitsDoneToday")
+        defaults.set(UserDefaults.standard.string(forKey: "selectedTheme") ?? "original", forKey: "widgetTheme")
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }

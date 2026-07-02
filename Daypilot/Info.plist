@@ -13,5 +13,7 @@
 	</array>
 	<key>GIDClientID</key>
 	<string>337135454596-jum7shlhodj3f3gnr5p2trv9l46mpdc3.apps.googleusercontent.com</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 </dict>
 </plist>

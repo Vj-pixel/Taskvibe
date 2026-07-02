@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F31235FC2FF6EA7C0015B7F1 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F31235FB2FF6EA7B0015B7F1 /* WidgetKit.framework */; };
+		F31235FE2FF6EA7C0015B7F1 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F31235FD2FF6EA7C0015B7F1 /* SwiftUI.framework */; };
+		F312360F2FF6EA7E0015B7F1 /* DaypilotWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F31235FA2FF6EA7B0015B7F1 /* DaypilotWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F3931AA82E2339C1004BAC3D /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = F3931AA72E2339C1004BAC3D /* FirebaseAI */; };
 		F3931AAA2E2339C1004BAC3D /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = F3931AA92E2339C1004BAC3D /* FirebaseAnalytics */; };
 		F3931AAC2E2339C1004BAC3D /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = F3931AAB2E2339C1004BAC3D /* FirebaseAnalyticsCore */; };
@@ -22,6 +25,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		F312360D2FF6EA7E0015B7F1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F3BD4BFE2DFEA11400F460D8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F31235F92FF6EA7B0015B7F1;
+			remoteInfo = DaypilotWidgetExtension;
+		};
 		F3BD4C142DFEA11500F460D8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F3BD4BFE2DFEA11400F460D8 /* Project object */;
@@ -38,13 +48,45 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		F31236142FF6EA7E0015B7F1 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F312360F2FF6EA7E0015B7F1 /* DaypilotWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		F31235FA2FF6EA7B0015B7F1 /* DaypilotWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DaypilotWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F31235FB2FF6EA7B0015B7F1 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		F31235FD2FF6EA7C0015B7F1 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		F31236172FF6EBC20015B7F1 /* DaypilotWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DaypilotWidgetExtension.entitlements; sourceTree = "<group>"; };
 		F3BD4C062DFEA11400F460D8 /* Daypilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Daypilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3BD4C132DFEA11500F460D8 /* DaypilotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaypilotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3BD4C1D2DFEA11500F460D8 /* DaypilotUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaypilotUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F31236132FF6EA7E0015B7F1 /* Exceptions for "DaypilotWidget" folder in "DaypilotWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F31235F92FF6EA7B0015B7F1 /* DaypilotWidgetExtension */;
+		};
+		F31236192FF6EC9F0015B7F1 /* Exceptions for "Daypilot" folder in "DaypilotWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				PomodoroActivityAttributes.swift,
+			);
+			target = F31235F92FF6EA7B0015B7F1 /* DaypilotWidgetExtension */;
+		};
 		F35022272E15EC070063F166 /* Exceptions for "Daypilot" folder in "Daypilot" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -55,10 +97,19 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		F31235FF2FF6EA7C0015B7F1 /* DaypilotWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F31236132FF6EA7E0015B7F1 /* Exceptions for "DaypilotWidget" folder in "DaypilotWidgetExtension" target */,
+			);
+			path = DaypilotWidget;
+			sourceTree = "<group>";
+		};
 		F3BD4C082DFEA11400F460D8 /* Daypilot */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				F35022272E15EC070063F166 /* Exceptions for "Daypilot" folder in "Daypilot" target */,
+				F31236192FF6EC9F0015B7F1 /* Exceptions for "Daypilot" folder in "DaypilotWidgetExtension" target */,
 			);
 			path = Daypilot;
 			sourceTree = "<group>";
@@ -76,6 +127,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		F31235F72FF6EA7B0015B7F1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F31235FE2FF6EA7C0015B7F1 /* SwiftUI.framework in Frameworks */,
+				F31235FC2FF6EA7C0015B7F1 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F3BD4C032DFEA11400F460D8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,9 +175,11 @@
 		F3BD4BFD2DFEA11400F460D8 = {
 			isa = PBXGroup;
 			children = (
+				F31236172FF6EBC20015B7F1 /* DaypilotWidgetExtension.entitlements */,
 				F3BD4C082DFEA11400F460D8 /* Daypilot */,
 				F3BD4C162DFEA11500F460D8 /* DaypilotTests */,
 				F3BD4C202DFEA11500F460D8 /* DaypilotUITests */,
+				F31235FF2FF6EA7C0015B7F1 /* DaypilotWidget */,
 				F3CD46D02E2C7AC2009100C3 /* Frameworks */,
 				F3BD4C072DFEA11400F460D8 /* Products */,
 			);
@@ -129,6 +191,7 @@
 				F3BD4C062DFEA11400F460D8 /* Daypilot.app */,
 				F3BD4C132DFEA11500F460D8 /* DaypilotTests.xctest */,
 				F3BD4C1D2DFEA11500F460D8 /* DaypilotUITests.xctest */,
+				F31235FA2FF6EA7B0015B7F1 /* DaypilotWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -136,6 +199,8 @@
 		F3CD46D02E2C7AC2009100C3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				F31235FB2FF6EA7B0015B7F1 /* WidgetKit.framework */,
+				F31235FD2FF6EA7C0015B7F1 /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -143,6 +208,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		F31235F92FF6EA7B0015B7F1 /* DaypilotWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F31236102FF6EA7E0015B7F1 /* Build configuration list for PBXNativeTarget "DaypilotWidgetExtension" */;
+			buildPhases = (
+				F31235F62FF6EA7B0015B7F1 /* Sources */,
+				F31235F72FF6EA7B0015B7F1 /* Frameworks */,
+				F31235F82FF6EA7B0015B7F1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F31235FF2FF6EA7C0015B7F1 /* DaypilotWidget */,
+			);
+			name = DaypilotWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = DaypilotWidgetExtension;
+			productReference = F31235FA2FF6EA7B0015B7F1 /* DaypilotWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		F3BD4C052DFEA11400F460D8 /* Daypilot */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = F3BD4C272DFEA11500F460D8 /* Build configuration list for PBXNativeTarget "Daypilot" */;
@@ -150,10 +237,12 @@
 				F3BD4C022DFEA11400F460D8 /* Sources */,
 				F3BD4C032DFEA11400F460D8 /* Frameworks */,
 				F3BD4C042DFEA11400F460D8 /* Resources */,
+				F31236142FF6EA7E0015B7F1 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F312360E2FF6EA7E0015B7F1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F3BD4C082DFEA11400F460D8 /* Daypilot */,
@@ -230,9 +319,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1640;
+				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					F31235F92FF6EA7B0015B7F1 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
 					F3BD4C052DFEA11400F460D8 = {
 						CreatedOnToolsVersion = 16.4;
 					};
@@ -267,11 +359,19 @@
 				F3BD4C052DFEA11400F460D8 /* Daypilot */,
 				F3BD4C122DFEA11500F460D8 /* DaypilotTests */,
 				F3BD4C1C2DFEA11500F460D8 /* DaypilotUITests */,
+				F31235F92FF6EA7B0015B7F1 /* DaypilotWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		F31235F82FF6EA7B0015B7F1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F3BD4C042DFEA11400F460D8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -296,6 +396,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		F31235F62FF6EA7B0015B7F1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F3BD4C022DFEA11400F460D8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -320,6 +427,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		F312360E2FF6EA7E0015B7F1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F31235F92FF6EA7B0015B7F1 /* DaypilotWidgetExtension */;
+			targetProxy = F312360D2FF6EA7E0015B7F1 /* PBXContainerItemProxy */;
+		};
 		F3BD4C152DFEA11500F460D8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = F3BD4C052DFEA11400F460D8 /* Daypilot */;
@@ -333,6 +445,70 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		F31236112FF6EA7E0015B7F1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = DaypilotWidgetExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3BPYR6J96P;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DaypilotWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DaypilotWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.varunjajara.Daypilot.DaypilotWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F31236122FF6EA7E0015B7F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = DaypilotWidgetExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3BPYR6J96P;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DaypilotWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DaypilotWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.varunjajara.Daypilot.DaypilotWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		F3BD4C252DFEA11500F460D8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -601,6 +777,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		F31236102FF6EA7E0015B7F1 /* Build configuration list for PBXNativeTarget "DaypilotWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F31236112FF6EA7E0015B7F1 /* Debug */,
+				F31236122FF6EA7E0015B7F1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		F3BD4C012DFEA11400F460D8 /* Build configuration list for PBXProject "Daypilot" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

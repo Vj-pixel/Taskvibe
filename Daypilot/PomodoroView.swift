@@ -2,6 +2,7 @@
 
 import SwiftUI
 import AudioToolbox
+import ActivityKit
 
 struct PomodoroView: View {
     var linkedTask: Daypilot? = nil
@@ -16,6 +17,7 @@ struct PomodoroView: View {
     @State private var isRunning         = false
     @State private var sessionLabel      = "Focus"
     @State private var showSettings      = false
+    @State private var liveActivity: Activity<PomodoroActivityAttributes>? = nil
 
     private var theme: ThemeOption { AppThemes.find(selectedTheme) }
 
@@ -110,6 +112,7 @@ struct PomodoroView: View {
                     Button {
                         secondsLeft = totalSeconds
                         isRunning = false
+                        endLiveActivity()
                     } label: {
                         Image(systemName: "arrow.counterclockwise")
                             .font(.system(size: 22, weight: .semibold))
@@ -120,7 +123,10 @@ struct PomodoroView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Button { isRunning.toggle() } label: {
+                    Button {
+                        isRunning.toggle()
+                        if isRunning { startLiveActivity() } else { pauseLiveActivity() }
+                    } label: {
                         Image(systemName: isRunning ? "pause.fill" : "play.fill")
                             .font(.system(size: 26, weight: .bold))
                             .foregroundColor(theme.color1)
@@ -134,6 +140,7 @@ struct PomodoroView: View {
                         let idx = presets.firstIndex(where: { $0.label == sessionLabel }) ?? 0
                         switchTo(presets[(idx + 1) % presets.count])
                         isRunning = false
+                        endLiveActivity()
                     } label: {
                         Image(systemName: "forward.fill")
                             .font(.system(size: 20, weight: .semibold))
@@ -153,6 +160,7 @@ struct PomodoroView: View {
                 return
             }
             secondsLeft -= 1
+            updateLiveActivity()
         }
         .sheet(isPresented: $showSettings) {
             timerSettingsSheet
@@ -230,7 +238,57 @@ struct PomodoroView: View {
     private func handleTimerEnd() {
         isRunning = false
         AudioServicesPlaySystemSound(1005)
+        HapticEngine.notification(.success)
+        endLiveActivity()
         let idx  = presets.firstIndex(where: { $0.label == sessionLabel }) ?? 0
         switchTo(presets[(idx + 1) % presets.count])
+    }
+
+    // MARK: - Live Activity
+
+    private func startLiveActivity() {
+        guard #available(iOS 16.2, *) else { return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        endLiveActivity()
+        let attrs = PomodoroActivityAttributes(taskTitle: linkedTask?.title ?? "")
+        let state = PomodoroActivityAttributes.ContentState(
+            secondsLeft: secondsLeft,
+            totalSeconds: totalSeconds,
+            sessionLabel: sessionLabel,
+            isRunning: true
+        )
+        liveActivity = try? Activity.request(
+            attributes: attrs,
+            contentState: state,
+            pushType: nil
+        )
+    }
+
+    private func pauseLiveActivity() {
+        guard #available(iOS 16.2, *) else { return }
+        let state = PomodoroActivityAttributes.ContentState(
+            secondsLeft: secondsLeft,
+            totalSeconds: totalSeconds,
+            sessionLabel: sessionLabel,
+            isRunning: false
+        )
+        Task { await liveActivity?.update(using: state) }
+    }
+
+    private func updateLiveActivity() {
+        guard #available(iOS 16.2, *) else { return }
+        let state = PomodoroActivityAttributes.ContentState(
+            secondsLeft: secondsLeft,
+            totalSeconds: totalSeconds,
+            sessionLabel: sessionLabel,
+            isRunning: isRunning
+        )
+        Task { await liveActivity?.update(using: state) }
+    }
+
+    private func endLiveActivity() {
+        guard #available(iOS 16.2, *) else { return }
+        Task { await liveActivity?.end(dismissalPolicy: .immediate) }
+        liveActivity = nil
     }
 }
