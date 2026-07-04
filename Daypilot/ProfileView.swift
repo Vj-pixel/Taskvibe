@@ -7,51 +7,161 @@ import GoogleSignIn
 import AuthenticationServices
 import CryptoKit
 
-struct ProfileView: View {
-    // MARK: - Properties
+// MARK: - Contribution Graph
 
-    @AppStorage("isAuthenticated") private var isAuthenticated = true
-    @Environment(\.modelContext) private var modelContext
+struct ContributionGraphView: View {
+    let daypilots: [Daypilot]
+    private let weeks = 18
+    private let cellSize: CGFloat = 13
+    private let gap: CGFloat = 3
+    private let calendar = Calendar.current
 
-    // Fetch raw daypilots without sorting to avoid compile issues
-    @Query private var daypilotsUnsorted: [Daypilot]
+    private var activityByDay: [Date: Int] {
+        var dict: [Date: Int] = [:]
+        for task in daypilots where task.isCompleted && task.type == .task {
+            guard let due = task.dueDate else { continue }
+            dict[calendar.startOfDay(for: due), default: 0] += 1
+        }
+        for habit in daypilots where habit.type == .habit {
+            guard let last = habit.lastCompletedDate else { continue }
+            dict[calendar.startOfDay(for: last), default: 0] += 1
+        }
+        return dict
+    }
 
-    // Computed sorted daypilots with a default for nil dueDate
-    private var daypilots: [Daypilot] {
-        daypilotsUnsorted.sorted {
-            ($0.dueDate ?? Date.distantFuture) < ($1.dueDate ?? Date.distantFuture)
+    private var gridColumns: [[Date]] {
+        let today = calendar.startOfDay(for: Date())
+        let weekday = calendar.component(.weekday, from: today)
+        let currentWeekStart = calendar.date(byAdding: .day, value: -(weekday - 1), to: today)!
+        return (0..<weeks).map { weekOffset in
+            let start = calendar.date(byAdding: .weekOfYear, value: weekOffset - (weeks - 1), to: currentWeekStart)!
+            return (0..<7).map { calendar.date(byAdding: .day, value: $0, to: start)! }
         }
     }
 
-    // User info states
+    private func cellColor(for date: Date) -> Color {
+        let count = activityByDay[date] ?? 0
+        let isFuture = date > calendar.startOfDay(for: Date())
+        if isFuture { return Color.white.opacity(0.05) }
+        switch count {
+        case 0:    return Color.white.opacity(0.09)
+        case 1:    return Color.blue.opacity(0.4)
+        case 2, 3: return Color.blue.opacity(0.72)
+        default:   return Color.blue
+        }
+    }
+
+    private var monthLabels: [(String, CGFloat)] {
+        var labels: [(String, CGFloat)] = []
+        var lastMonth = -1
+        for (col, week) in gridColumns.enumerated() {
+            let month = calendar.component(.month, from: week[0])
+            if month != lastMonth {
+                let x = CGFloat(col) * (cellSize + gap)
+                let formatter = DateFormatter()
+                formatter.dateFormat = "MMM"
+                labels.append((formatter.string(from: week[0]), x))
+                lastMonth = month
+            }
+        }
+        return labels
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ZStack(alignment: .topLeading) {
+                ForEach(monthLabels, id: \.1) { label, x in
+                    Text(label)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.white.opacity(0.45))
+                        .offset(x: x)
+                }
+            }
+            .frame(height: 14)
+
+            HStack(alignment: .top, spacing: gap) {
+                ForEach(0..<gridColumns.count, id: \.self) { col in
+                    VStack(spacing: gap) {
+                        ForEach(0..<7, id: \.self) { row in
+                            let date = gridColumns[col][row]
+                            RoundedRectangle(cornerRadius: 2.5)
+                                .fill(cellColor(for: date))
+                                .frame(width: cellSize, height: cellSize)
+                        }
+                    }
+                }
+            }
+
+            HStack {
+                Text("Less")
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.35))
+                ForEach([0, 1, 2, 4], id: \.self) { level in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(level == 0 ? Color.white.opacity(0.09) : Color.blue.opacity(Double(level) * 0.25))
+                        .frame(width: 10, height: 10)
+                }
+                Text("More")
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.35))
+            }
+            .padding(.top, 2)
+        }
+    }
+}
+
+// MARK: - Profile View
+
+struct ProfileView: View {
+    @AppStorage("isAuthenticated") private var isAuthenticated = true
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage("selectedTheme") private var selectedTheme = "original"
+
+    @Query private var daypilotsUnsorted: [Daypilot]
+    private var daypilots: [Daypilot] {
+        daypilotsUnsorted.sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+    }
+
     @State private var displayName = ""
     @State private var email = ""
     @State private var showAlert = false
     @State private var alertMessage = ""
-    @State private var totalTodos: Int?
-    @State private var totalCompleted: Int?
-
-    // Profile image states
+    @State private var totalTodos: Int = 0
+    @State private var totalCompleted: Int = 0
     @State private var profileImage: UIImage?
     @State private var selectedItem: PhotosPickerItem?
     @State private var isUploadingImage = false
-
-    // Account deletion & auth
     @State private var showDeleteAccountAlert = false
     @State private var showReauthSheet = false
     @State private var authProvider = ""
 
-    // MARK: - View Body
+    private var theme: ThemeOption { AppThemes.find(selectedTheme) }
 
     var body: some View {
         ZStack {
             LinearGradient(
-                gradient: Gradient(colors: [Color.black, Color.blue.opacity(0.8)]),
+                colors: [Color(white: 0.04), theme.color1.opacity(0.55)],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
 
-            contentView
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    headerSection
+                    statsRow
+                        .padding(.top, 28)
+                    activitySection
+                        .padding(.top, 28)
+                    streakSection
+                        .padding(.top, 20)
+                    rankSection
+                        .padding(.top, 20)
+                    accountSection
+                        .padding(.top, 32)
+                        .padding(.bottom, 48)
+                }
+                .padding(.horizontal, 20)
+            }
         }
         .onAppear(perform: loadUser)
         .onChange(of: daypilots) { _, _ in updateTaskStats() }
@@ -62,7 +172,7 @@ struct ProfileView: View {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) { showReauthSheet = true }
         } message: {
-            Text("Are you sure you want to delete your account? This action cannot be undone. All your tasks and data will be permanently deleted.")
+            Text("This cannot be undone. All your tasks and data will be permanently deleted.")
         }
         .sheet(isPresented: $showReauthSheet) {
             ReauthenticationSheet(
@@ -74,146 +184,230 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - Header
 
-    private var contentView: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                avatarView
-                userInfoView
-                Divider().background(Color.white.opacity(0.3))
-                statsView
-                Divider().background(Color.white.opacity(0.3))
-                streakView
-                Divider().background(Color.white.opacity(0.3))
-                rankView
-                signOutButton
-                deleteAccountButton
-            }
-            .padding()
-            .frame(width: 320)
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(.ultraThinMaterial)
-                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.1), lineWidth: 1))
-            )
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 32)
-        }
-    }
+    private var headerSection: some View {
+        VStack(spacing: 12) {
+            ZStack(alignment: .bottomTrailing) {
+                Group {
+                    if let image = profileImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 90, height: 90)
+                            .clipShape(Circle())
+                    } else {
+                        Circle()
+                            .fill(Color.white.opacity(0.14))
+                            .frame(width: 90, height: 90)
+                            .overlay(
+                                Image(systemName: "person.fill")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 42, height: 42)
+                                    .foregroundColor(.white.opacity(0.6))
+                            )
+                    }
+                }
+                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1.5))
+                .overlay {
+                    if isUploadingImage {
+                        Circle()
+                            .fill(Color.black.opacity(0.5))
+                            .overlay(ProgressView().progressViewStyle(.circular).tint(.white))
+                    }
+                }
 
-    private var avatarView: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Group {
-                if let image = profileImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 100, height: 100)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 2))
-                } else {
-                    Circle()
-                        .fill(Color.white.opacity(0.2))
-                        .frame(width: 100, height: 100)
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 50, height: 50)
-                                .foregroundColor(.white)
-                        )
-                        .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 2))
+                PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
+                    ZStack {
+                        Circle().fill(theme.color1).frame(width: 26, height: 26)
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                    }
                 }
+                .disabled(isUploadingImage)
+                .offset(x: 2, y: 2)
             }
-            .overlay {
-                if isUploadingImage {
-                    Circle()
-                        .fill(Color.black.opacity(0.5))
-                        .overlay(ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .white)))
-                }
+            .frame(width: 90, height: 90)
+            .onChange(of: selectedItem) { _, newItem in
+                if let newItem { Task { await uploadProfileImage(from: newItem) } }
             }
+            .padding(.top, 24)
 
-            PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
-                ZStack {
-                    Circle()
-                        .fill(Color.blue)
-                        .frame(width: 32, height: 32)
-                        .shadow(radius: 2)
-                    Image(systemName: "pencil")
-                        .foregroundColor(.white)
-                        .font(.system(size: 16, weight: .bold))
-                }
-            }
-            .disabled(isUploadingImage)
-            .padding(4)
-        }
-        .frame(width: 100, height: 100)
-        .onChange(of: selectedItem) { _, newItem in
-            if let newItem {
-                Task { await uploadProfileImage(from: newItem) }
+            VStack(spacing: 4) {
+                Text(displayName.isEmpty ? "Your Name" : displayName)
+                    .font(.title2.weight(.bold))
+                    .foregroundColor(.white)
+                Text(email.isEmpty ? "" : email)
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.5))
             }
         }
     }
 
-    private var userInfoView: some View {
-        Group {
-            Text(displayName.isEmpty ? "No Name" : displayName)
-                .font(.title2.bold())
+    // MARK: - Stats Row
+
+    private var statsRow: some View {
+        HStack(spacing: 0) {
+            statPill(value: totalTodos, label: "Tasks")
+            Divider().frame(height: 32).background(Color.white.opacity(0.12))
+            statPill(value: totalCompleted, label: "Completed")
+            Divider().frame(height: 32).background(Color.white.opacity(0.12))
+            statPill(value: bestHabitStreak, label: "Best Streak")
+        }
+        .padding(.vertical, 16)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.1), lineWidth: 1))
+    }
+
+    private func statPill(value: Int, label: String) -> some View {
+        VStack(spacing: 3) {
+            Text("\(value)")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundColor(.white.opacity(0.5))
+        }
+        .frame(maxWidth: .infinity)
+    }
 
-            Text(email.isEmpty ? "No Email" : email)
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.7))
+    // MARK: - Activity Graph
+
+    private var activitySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionLabel("Activity", icon: "chart.bar.fill")
+            ContributionGraphView(daypilots: daypilots)
+                .padding(16)
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.1), lineWidth: 1))
         }
     }
 
-    private var statsView: some View {
-        HStack(spacing: 40) {
-            StatView(title: "Total Tasks", value: totalTodos)
-            StatView(title: "Completed", value: totalCompleted)
-        }
-    }
+    // MARK: - Streaks
 
-    private var streakView: some View {
-        HStack(spacing: 32) {
-            VStack(spacing: 6) {
-                HStack(spacing: 5) {
-                    Image(systemName: "flame.fill")
-                        .foregroundColor(.orange)
-                    Text("\(currentTaskStreak)")
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
-                }
-                Text("Task Streak")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.6))
-                Text("days")
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.4))
+    private var streakSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionLabel("Streaks", icon: "flame.fill")
+            HStack(spacing: 12) {
+                streakCard(icon: "flame.fill", color: .orange, value: currentTaskStreak, label: "Task streak")
+                streakCard(icon: "bolt.fill", color: .yellow, value: bestHabitStreak, label: "Best habit")
             }
+        }
+    }
 
-            Divider()
-                .frame(height: 44)
-                .background(Color.white.opacity(0.2))
+    private func streakCard(icon: String, color: Color, value: Int, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(color)
+            Text("\(value)")
+                .font(.system(size: 32, weight: .black, design: .rounded))
+                .foregroundColor(.white)
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundColor(.white.opacity(0.5))
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.1), lineWidth: 1))
+    }
 
-            VStack(spacing: 6) {
-                HStack(spacing: 5) {
-                    Image(systemName: "bolt.fill")
+    // MARK: - Rank
+
+    private var rankSection: some View {
+        let completed = totalCompleted
+        let tier = RankSystem.rank(for: completed)
+        return VStack(alignment: .leading, spacing: 12) {
+            sectionLabel("Rank", icon: "trophy.fill")
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 12) {
+                    Image(systemName: tier.icon)
+                        .font(.system(size: 28))
                         .foregroundColor(.yellow)
-                    Text("\(bestHabitStreak)")
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tier.name)
+                            .font(.title3.weight(.bold))
+                            .foregroundColor(.white)
+                        if let nextAt = tier.nextAt {
+                            Text("\(nextAt - completed) tasks to next rank")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.5))
+                        } else {
+                            Text("Max rank achieved!")
+                                .font(.caption)
+                                .foregroundColor(.yellow.opacity(0.8))
+                        }
+                    }
                 }
-                Text("Best Habit")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.6))
-                Text("day streak")
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.4))
+                if let nextAt = tier.nextAt {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.white.opacity(0.1))
+                                .frame(height: 6)
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(
+                                    LinearGradient(colors: [.yellow, .orange], startPoint: .leading, endPoint: .trailing)
+                                )
+                                .frame(width: geo.size.width * tier.progress(for: completed), height: 6)
+                        }
+                    }
+                    .frame(height: 6)
+                }
+            }
+            .padding(16)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.1), lineWidth: 1))
+        }
+    }
+
+    // MARK: - Account
+
+    private var accountSection: some View {
+        VStack(spacing: 10) {
+            Button(action: signOut) {
+                HStack {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                    Text("Sign Out")
+                        .fontWeight(.semibold)
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            }
+
+            Button(action: { showDeleteAccountAlert = true }) {
+                HStack {
+                    Image(systemName: "trash.fill")
+                    Text("Delete Account")
+                        .fontWeight(.semibold)
+                }
+                .foregroundColor(.red.opacity(0.85))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(Color.red.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.red.opacity(0.2), lineWidth: 1))
             }
         }
-        .padding(.vertical, 4)
+    }
+
+    // MARK: - Helpers
+
+    private func sectionLabel(_ text: String, icon: String) -> some View {
+        Label(text, systemImage: icon)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(.white.opacity(0.55))
     }
 
     private var currentTaskStreak: Int {
@@ -237,81 +431,14 @@ struct ProfileView: View {
         daypilots.filter { $0.type == .habit }.map(\.streakCount).max() ?? 0
     }
 
-    private var rankView: some View {
-        let completed = totalCompleted ?? 0
-        let tier = RankSystem.rank(for: completed)
-        return VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                Image(systemName: tier.icon)
-                    .font(.title2)
-                    .foregroundColor(.yellow)
-                Text(tier.name)
-                    .font(.headline.bold())
-                    .foregroundColor(.white)
-            }
-
-            if let nextAt = tier.nextAt {
-                ProgressView(value: tier.progress(for: completed))
-                    .tint(.yellow)
-                    .scaleEffect(x: 1, y: 1.6)
-                    .padding(.horizontal, 4)
-                Text("\(nextAt - completed) tasks to next rank")
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.6))
-            } else {
-                Text("Max rank achieved!")
-                    .font(.caption2)
-                    .foregroundColor(.yellow.opacity(0.8))
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
-    private var signOutButton: some View {
-        Button(action: signOut) {
-            Text("Sign Out")
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .foregroundColor(.red)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.white.opacity(0.1))
-                        .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 4)
-                )
-        }
-        .padding(.top, 12)
-    }
-
-    private var deleteAccountButton: some View {
-        Button(action: { showDeleteAccountAlert = true }) {
-            Text("Delete Account")
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .foregroundColor(.white)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.red.opacity(0.8))
-                        .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 4)
-                )
-        }
-    }
-
-    // MARK: - Methods
+    // MARK: - Data Methods
 
     private func loadUser() {
         if let user = Auth.auth().currentUser {
-            displayName = user.displayName ?? "No Name"
+            displayName = user.displayName ?? ""
             email = user.email ?? ""
-
-            if let providerData = user.providerData.first {
-                authProvider = providerData.providerID
-            }
-
-            if let photoURL = user.photoURL {
-                loadProfileImage(from: photoURL)
-            }
+            authProvider = user.providerData.first?.providerID ?? ""
+            if let photoURL = user.photoURL { loadProfileImage(from: photoURL) }
         }
         updateTaskStats()
     }
@@ -323,7 +450,6 @@ struct ProfileView: View {
 
     private func loadProfileImage(from url: URL) {
         Task {
-            // Try disk cache first — avoids a network round-trip every launch
             if let userId = Auth.auth().currentUser?.uid {
                 let cached = profileCacheURL(for: userId)
                 if let data = try? Data(contentsOf: cached), let img = UIImage(data: data) {
@@ -331,69 +457,42 @@ struct ProfileView: View {
                     return
                 }
             }
-            // Download and cache to disk
-            do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                if let image = UIImage(data: data) {
-                    await MainActor.run { self.profileImage = image }
-                    if let userId = Auth.auth().currentUser?.uid {
-                        try? data.write(to: profileCacheURL(for: userId))
-                    }
+            if let (data, _) = try? await URLSession.shared.data(from: url),
+               let image = UIImage(data: data) {
+                await MainActor.run { self.profileImage = image }
+                if let userId = Auth.auth().currentUser?.uid {
+                    try? data.write(to: profileCacheURL(for: userId))
                 }
-            } catch {
-                print("Failed to load profile image: \(error.localizedDescription)")
             }
         }
     }
 
     private func uploadProfileImage(from item: PhotosPickerItem) async {
         isUploadingImage = true
+        defer { Task { @MainActor in isUploadingImage = false } }
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let image = UIImage(data: data),
+              let compressed = image.jpegData(compressionQuality: 0.5) else { return }
+
+        await MainActor.run { self.profileImage = image }
+
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        let cacheURL = profileCacheURL(for: userId)
+        try? FileManager.default.removeItem(at: cacheURL)
+        try? compressed.write(to: cacheURL)
 
         do {
-            guard let data = try await item.loadTransferable(type: Data.self),
-                  let image = UIImage(data: data),
-                  let compressedData = image.jpegData(compressionQuality: 0.5) else {
-                await MainActor.run {
-                    alertMessage = "Failed to load image."
-                    showAlert = true
-                    isUploadingImage = false
-                }
-                return
-            }
-
-            await MainActor.run { self.profileImage = image }
-
-            guard let userId = Auth.auth().currentUser?.uid else {
-                await MainActor.run { isUploadingImage = false }
-                return
-            }
-
-            // Invalidate disk cache before writing new image
-            let cacheURL = profileCacheURL(for: userId)
-            try? FileManager.default.removeItem(at: cacheURL)
-            try? compressedData.write(to: cacheURL)
-
-            let storageRef = Storage.storage().reference()
-            let profileImageRef = storageRef.child("profile_images/\(userId).jpg")
-
-            let metadata = StorageMetadata()
-            metadata.contentType = "image/jpeg"
-
-            _ = try await profileImageRef.putDataAsync(compressedData, metadata: metadata)
-            let downloadURL = try await profileImageRef.downloadURL()
-
-            let changeRequest = Auth.auth().currentUser?.createProfileChangeRequest()
-            changeRequest?.photoURL = downloadURL
-            try await changeRequest?.commitChanges()
-
-            // Reload user so all profile state is fresh
-            await MainActor.run { isUploadingImage = false; loadUser() }
-
+            let ref = Storage.storage().reference().child("profile_images/\(userId).jpg")
+            let meta = StorageMetadata(); meta.contentType = "image/jpeg"
+            _ = try await ref.putDataAsync(compressed, metadata: meta)
+            let downloadURL = try await ref.downloadURL()
+            let req = Auth.auth().currentUser?.createProfileChangeRequest()
+            req?.photoURL = downloadURL
+            try await req?.commitChanges()
         } catch {
             await MainActor.run {
                 alertMessage = "Failed to upload image: \(error.localizedDescription)"
                 showAlert = true
-                isUploadingImage = false
             }
         }
     }
@@ -415,26 +514,16 @@ struct ProfileView: View {
 
     private func deleteAccount() {
         guard let user = Auth.auth().currentUser else { return }
-
         Task {
             do {
-                for task in daypilots {
-                    modelContext.delete(task)
-                }
+                for task in daypilots { modelContext.delete(task) }
                 try? modelContext.save()
-
-                let storageRef = Storage.storage().reference()
-                let profileImageRef = storageRef.child("profile_images/\(user.uid).jpg")
-                try? await profileImageRef.delete()
-
+                try? await Storage.storage().reference().child("profile_images/\(user.uid).jpg").delete()
                 try await user.delete()
-
                 await MainActor.run { isAuthenticated = false }
             } catch let error as NSError {
                 await MainActor.run {
                     if error.code == AuthErrorCode.requiresRecentLogin.rawValue {
-                        alertMessage = "Please sign in again to delete your account."
-                        showAlert = true
                         showReauthSheet = true
                     } else {
                         alertMessage = "Failed to delete account: \(error.localizedDescription)"
@@ -446,20 +535,15 @@ struct ProfileView: View {
     }
 }
 
-// MARK: - Supporting Views
+// MARK: - StatView (kept for compatibility)
 
 struct StatView: View {
     var title: String
     var value: Int?
-
     var body: some View {
         VStack {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.white.opacity(0.6))
-            Text(value == nil ? "— —" : "\(value!)")
-                .font(.title3.bold())
-                .foregroundColor(.white)
+            Text(title).font(.caption).foregroundColor(.white.opacity(0.6))
+            Text(value == nil ? "—" : "\(value!)").font(.title3.bold()).foregroundColor(.white)
         }
     }
 }
@@ -469,7 +553,7 @@ struct StatView: View {
         .modelContainer(for: Daypilot.self, inMemory: true)
 }
 
-// MARK: - ReauthenticationSheet and Delegate remain unchanged, organized below your main view code
+// MARK: - ReauthenticationSheet
 
 struct ReauthenticationSheet: View {
     let email: String
@@ -482,15 +566,12 @@ struct ReauthenticationSheet: View {
     @State private var errorMessage = ""
     @Environment(\.dismiss) private var dismiss
 
-    var isPasswordProvider: Bool {
-        authProvider == "password"
-    }
-
+    var isPasswordProvider: Bool { authProvider == "password" }
     var providerName: String {
         switch authProvider {
         case "google.com": return "Google"
-        case "apple.com": return "Apple"
-        default: return "your provider"
+        case "apple.com":  return "Apple"
+        default:           return "your provider"
         }
     }
 
@@ -501,127 +582,70 @@ struct ReauthenticationSheet: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 60))
                         .foregroundColor(.red)
-
                     Text("Confirm Your Identity")
                         .font(.title2.bold())
                         .foregroundColor(.white)
-
-                    if isPasswordProvider {
-                        Text("Please enter your password to delete your account")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    } else {
-                        Text("Please sign in with \(providerName) to confirm account deletion")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
+                    Text(isPasswordProvider
+                         ? "Enter your password to delete your account"
+                         : "Sign in with \(providerName) to confirm account deletion")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
                 .padding(.top, 40)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Email")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.6))
-
+                    Text("Email").font(.caption).foregroundColor(.white.opacity(0.6))
                     Text(email)
-                        .font(.body)
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.white.opacity(0.1))
-                        )
+                        .font(.body).foregroundColor(.white)
+                        .padding().frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.1)))
 
                     if isPasswordProvider {
-                        Text("Password")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.6))
-                            .padding(.top, 8)
-
+                        Text("Password").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.top, 8)
                         SecureField("Enter your password", text: $password)
-                            .foregroundColor(.white)
-                            .padding()
+                            .foregroundColor(.white).padding()
                             .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.white.opacity(0.1))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.red.opacity(0.5), lineWidth: 1.5)
-                                    )
+                                RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.1))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.red.opacity(0.5), lineWidth: 1.5))
                             )
                     }
                 }
                 .padding(.horizontal)
 
                 if !errorMessage.isEmpty {
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .padding(.horizontal)
+                    Text(errorMessage).font(.caption).foregroundColor(.red).padding(.horizontal)
                 }
 
                 VStack(spacing: 12) {
-                    Button(action: {
-                        reauthenticateAndDelete()
-                    }) {
+                    Button(action: reauthenticateAndDelete) {
                         if isAuthenticating {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 20)
+                            ProgressView().progressViewStyle(.circular).tint(.white)
+                                .frame(maxWidth: .infinity).frame(height: 20)
                         } else {
-                            HStack {
-                                if !isPasswordProvider {
-                                    if authProvider == "google.com" {
-                                        Image(systemName: "g.circle.fill")
-                                    } else if authProvider == "apple.com" {
-                                        Image(systemName: "applelogo")
-                                    }
-                                }
-                                Text(isPasswordProvider ? "Delete My Account" : "Sign in with \(providerName)")
-                                    .fontWeight(.semibold)
-                            }
+                            Text(isPasswordProvider ? "Delete My Account" : "Sign in with \(providerName)")
+                                .fontWeight(.semibold)
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.red)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
+                    .frame(maxWidth: .infinity).padding()
+                    .background(Color.red).foregroundColor(.white).cornerRadius(12)
                     .disabled((isPasswordProvider && password.isEmpty) || isAuthenticating)
                     .opacity((isPasswordProvider && password.isEmpty) ? 0.6 : 1.0)
 
-                    Button(action: {
-                        dismiss()
-                        onCancel()
-                    }) {
-                        Text("Cancel")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .foregroundColor(.white)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.white.opacity(0.2))
-                            )
+                    Button { dismiss(); onCancel() } label: {
+                        Text("Cancel").fontWeight(.semibold)
+                            .frame(maxWidth: .infinity).padding().foregroundColor(.white)
+                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.2)))
                     }
                 }
                 .padding(.horizontal)
-
                 Spacer()
             }
             .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [Color.black, Color.blue.opacity(0.8)]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                LinearGradient(colors: [Color.black, Color.blue.opacity(0.8)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .ignoresSafeArea()
             )
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -629,27 +653,13 @@ struct ReauthenticationSheet: View {
 
     private func reauthenticateAndDelete() {
         guard let user = Auth.auth().currentUser else { return }
-
-        isAuthenticating = true
-        errorMessage = ""
-
+        isAuthenticating = true; errorMessage = ""
         if isPasswordProvider {
             let credential = EmailAuthProvider.credential(withEmail: email, password: password)
-
             user.reauthenticate(with: credential) { _, error in
                 isAuthenticating = false
-
-                if let error = error {
-                    errorMessage = error.localizedDescription
-                } else {
-                    dismiss()
-                    onSuccess()
-                }
+                if let error { errorMessage = error.localizedDescription } else { dismiss(); onSuccess() }
             }
-        } else if authProvider == "google.com" {
-            // Add Google reauth here if needed
-        } else if authProvider == "apple.com" {
-            // Add Apple reauth here if needed
         }
     }
 }

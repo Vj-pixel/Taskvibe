@@ -248,7 +248,8 @@ struct PomodoroView: View {
 
     private func startLiveActivity() {
         guard #available(iOS 16.2, *) else { return }
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        let info = ActivityAuthorizationInfo()
+        guard info.areActivitiesEnabled else { return }
         endLiveActivity()
         let attrs = PomodoroActivityAttributes(taskTitle: linkedTask?.title ?? "")
         let state = PomodoroActivityAttributes.ContentState(
@@ -257,11 +258,7 @@ struct PomodoroView: View {
             sessionLabel: sessionLabel,
             isRunning: true
         )
-        liveActivity = try? Activity.request(
-            attributes: attrs,
-            contentState: state,
-            pushType: nil
-        )
+        liveActivity = try? Activity.request(attributes: attrs, contentState: state, pushType: nil)
     }
 
     private func pauseLiveActivity() {

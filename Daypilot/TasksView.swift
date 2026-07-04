@@ -664,6 +664,10 @@ struct TaskRowView: View {
         return Calendar.current.compare(occ, to: Date(), toGranularity: .day) == .orderedDescending
     }
 
+    @State private var bounceScale: CGFloat = 0.72
+    @State private var bounceOpacity: Double = 0
+    @State private var bounceOffset: CGFloat = -18
+
     var body: some View {
         DraggableTaskView(
             task: task,
@@ -674,8 +678,9 @@ struct TaskRowView: View {
             occurrenceDate: occurrenceDate,
             isFutureHabit: isFutureHabit
         )
-        .opacity(taskOpacity)
-        .animation(.easeInOut(duration: 0.6), value: newTaskIDs)
+        .scaleEffect(bounceScale)
+        .opacity(bounceOpacity)
+        .offset(y: bounceOffset)
         .onAppear { handleTaskAppearance() }
         .listRowInsets(EdgeInsets())
         .listRowBackground(Color.clear)
@@ -683,13 +688,21 @@ struct TaskRowView: View {
         .contentShape(Rectangle())
     }
 
-    private var taskOpacity: Double { newTaskIDs.contains(task.uuid) ? 0 : 1 }
-
     private func handleTaskAppearance() {
         if newTaskIDs.contains(task.uuid) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation { _ = newTaskIDs.remove(task.uuid) }
+            HapticEngine.impact(.light)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.58)) {
+                    bounceScale = 1.0
+                    bounceOpacity = 1.0
+                    bounceOffset = 0
+                    _ = newTaskIDs.remove(task.uuid)
+                }
             }
+        } else {
+            bounceScale = 1.0
+            bounceOpacity = 1.0
+            bounceOffset = 0
         }
     }
 }
