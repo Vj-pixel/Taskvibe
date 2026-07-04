@@ -1,6 +1,5 @@
 import SwiftUI
 import FirebaseAuth
-import FirebaseStorage
 import PhotosUI
 import SwiftData
 import GoogleSignIn
@@ -443,26 +442,23 @@ struct ProfileView: View {
         updateTaskStats()
     }
 
-    private func profileCacheURL(for userId: String) -> URL {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+    private func localProfileURL(for userId: String) -> URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("profile_\(userId).jpg")
     }
 
-    private func loadProfileImage(from url: URL) {
+    private func loadProfileImage(from remoteURL: URL) {
         Task {
-            if let userId = Auth.auth().currentUser?.uid {
-                let cached = profileCacheURL(for: userId)
-                if let data = try? Data(contentsOf: cached), let img = UIImage(data: data) {
-                    await MainActor.run { self.profileImage = img }
-                    return
-                }
+            guard let userId = Auth.auth().currentUser?.uid else { return }
+            let local = localProfileURL(for: userId)
+            if let data = try? Data(contentsOf: local), let img = UIImage(data: data) {
+                await MainActor.run { self.profileImage = img }
+                return
             }
-            if let (data, _) = try? await URLSession.shared.data(from: url),
+            if let (data, _) = try? await URLSession.shared.data(from: remoteURL),
                let image = UIImage(data: data) {
                 await MainActor.run { self.profileImage = image }
-                if let userId = Auth.auth().currentUser?.uid {
-                    try? data.write(to: profileCacheURL(for: userId))
-                }
+                try? data.write(to: local)
             }
         }
     }
@@ -470,31 +466,21 @@ struct ProfileView: View {
     private func uploadProfileImage(from item: PhotosPickerItem) async {
         isUploadingImage = true
         defer { Task { @MainActor in isUploadingImage = false } }
+
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data),
-              let compressed = image.jpegData(compressionQuality: 0.5) else { return }
+              let compressed = image.jpegData(compressionQuality: 0.7) else {
+            await MainActor.run {
+                alertMessage = "Couldn't load the selected photo. Try again."
+                showAlert = true
+            }
+            return
+        }
 
         await MainActor.run { self.profileImage = image }
 
         guard let userId = Auth.auth().currentUser?.uid else { return }
-        let cacheURL = profileCacheURL(for: userId)
-        try? FileManager.default.removeItem(at: cacheURL)
-        try? compressed.write(to: cacheURL)
-
-        do {
-            let ref = Storage.storage().reference().child("profile_images/\(userId).jpg")
-            let meta = StorageMetadata(); meta.contentType = "image/jpeg"
-            _ = try await ref.putDataAsync(compressed, metadata: meta)
-            let downloadURL = try await ref.downloadURL()
-            let req = Auth.auth().currentUser?.createProfileChangeRequest()
-            req?.photoURL = downloadURL
-            try await req?.commitChanges()
-        } catch {
-            await MainActor.run {
-                alertMessage = "Failed to upload image: \(error.localizedDescription)"
-                showAlert = true
-            }
-        }
+        try? compressed.write(to: localProfileURL(for: userId))
     }
 
     private func updateTaskStats() {
@@ -518,7 +504,7 @@ struct ProfileView: View {
             do {
                 for task in daypilots { modelContext.delete(task) }
                 try? modelContext.save()
-                try? await Storage.storage().reference().child("profile_images/\(user.uid).jpg").delete()
+                try? FileManager.default.removeItem(at: localProfileURL(for: user.uid))
                 try await user.delete()
                 await MainActor.run { isAuthenticated = false }
             } catch let error as NSError {
