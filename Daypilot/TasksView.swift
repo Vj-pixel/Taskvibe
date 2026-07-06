@@ -253,86 +253,142 @@ struct TaskContentView: View {
 
     @AppStorage("selectedTheme")       private var selectedTheme       = "original"
     @AppStorage("progressDisplayStyle") private var progressDisplayStyle = "segmented"
+    @Environment(\.modelContext) private var modelContext
+    @State private var isExpanded = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            // Emoji overrides the status ring when set
-            if let emoji = task.taskEmoji, !emoji.isEmpty {
-                Text(emoji)
-                    .font(.system(size: 30))
-                    .frame(width: 38, height: 38)
-            } else if task.type == .task {
-                StatusRing(progress: task.progress, color: ringColor) {
-                    let all = TaskStatus.allCases
-                    let idx = all.firstIndex(of: task.status) ?? 0
-                    onStatusChange(all[(idx + 1) % all.count])
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(task.title)
-                        .font(.headline)
-                    sourceTagBadge
-                    userTagBadge
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 12) {
+                // Emoji overrides the status ring when set
+                if let emoji = task.taskEmoji, !emoji.isEmpty {
+                    Text(emoji)
+                        .font(.system(size: 30))
+                        .frame(width: 38, height: 38)
+                } else if task.type == .task {
+                    StatusRing(progress: task.progress, color: ringColor) {
+                        let all = TaskStatus.allCases
+                        let idx = all.firstIndex(of: task.status) ?? 0
+                        onStatusChange(all[(idx + 1) % all.count])
+                    }
                 }
 
-                let displayDate = (task.type == .habit ? occurrenceDate : nil) ?? task.dueDate
-                if let due = displayDate {
-                    Text("Due: \(due.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.8))
-                }
-
-                if task.type == .habit {
-                    let doneToday = HabitScheduler.isDoneToday(task)
+                VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Text(task.habitFrequency.rawValue)
-                            .font(.caption2)
-                            .foregroundColor(.blue)
-                        if task.streakCount > 0 {
-                            Text("🔥 \(task.streakCount) day streak")
+                        Text(task.title)
+                            .font(.headline)
+                        sourceTagBadge
+                        userTagBadge
+                    }
+
+                    let displayDate = (task.type == .habit ? occurrenceDate : nil) ?? task.dueDate
+                    if let due = displayDate {
+                        Text("Due: \(due.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+
+                    if task.type == .habit {
+                        let doneToday = HabitScheduler.isDoneToday(task)
+                        HStack(spacing: 6) {
+                            Text(task.habitFrequency.rawValue)
                                 .font(.caption2)
-                                .foregroundColor(.orange)
+                                .foregroundColor(.blue)
+                            if task.streakCount > 0 {
+                                Text("🔥 \(task.streakCount) day streak")
+                                    .font(.caption2)
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                        if doneToday {
+                            Text("✓ Done for today")
+                                .font(.caption2)
+                                .foregroundColor(.green.opacity(0.85))
+                        }
+                        if isFutureHabit {
+                            Text("Available tomorrow")
+                                .font(.caption2)
+                                .foregroundColor(.gray)
                         }
                     }
-                    if doneToday {
-                        Text("✓ Done for today")
-                            .font(.caption2)
-                            .foregroundColor(.green.opacity(0.85))
-                    }
-                    if isFutureHabit {
-                        Text("Available tomorrow")
-                            .font(.caption2)
-                            .foregroundColor(.gray)
-                    }
-                }
 
-                Text(task.urgency.rawValue)
-                    .font(.caption2)
-                    .foregroundColor(.primary.opacity(0.6))
-
-                if !task.subtasks.isEmpty {
-                    let done = task.subtasks.filter(\.isCompleted).count
-                    Label("\(done)/\(task.subtasks.count) subtasks", systemImage: done == task.subtasks.count ? "checkmark.square.fill" : "square.split.bottomrightquarter")
+                    Text(task.urgency.rawValue)
                         .font(.caption2)
-                        .foregroundColor(done == task.subtasks.count ? .green.opacity(0.8) : .white.opacity(0.55))
+                        .foregroundColor(.primary.opacity(0.6))
+
+                    if !task.subtasks.isEmpty {
+                        let done = task.subtasks.filter(\.isCompleted).count
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                isExpanded.toggle()
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2.weight(.bold))
+                                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isExpanded)
+                                Text("\(done)/\(task.subtasks.count) subtask\(task.subtasks.count == 1 ? "" : "s")")
+                                    .font(.caption2)
+                                if done == task.subtasks.count {
+                                    Image(systemName: "checkmark").font(.caption2)
+                                }
+                            }
+                            .foregroundColor(done == task.subtasks.count ? .green.opacity(0.75) : .white.opacity(0.5))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // Attachment image thumbnail
+                    if let img = task.attachmentImage {
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 56, height: 56)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .padding(.top, 2)
+                    }
                 }
 
-                // Attachment image thumbnail
-                if let img = task.attachmentImage {
-                    Image(uiImage: img)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 56, height: 56)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .padding(.top, 2)
-                }
+                Spacer()
             }
+            .padding(16)
 
-            Spacer()
+            if isExpanded && !task.subtasks.isEmpty {
+                Rectangle()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(height: 1)
+                    .padding(.horizontal, 12)
+
+                VStack(spacing: 2) {
+                    ForEach(task.subtasks.sorted { !$0.isCompleted && $1.isCompleted }) { sub in
+                        HStack(spacing: 10) {
+                            Button {
+                                sub.isCompleted.toggle()
+                                try? modelContext.save()
+                                HapticEngine.impact(.light)
+                            } label: {
+                                Image(systemName: sub.isCompleted ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(sub.isCompleted ? .green.opacity(0.8) : .white.opacity(0.35))
+                                    .font(.system(size: 16))
+                            }
+                            .buttonStyle(.plain)
+
+                            Text(sub.title)
+                                .font(.subheadline)
+                                .foregroundColor(sub.isCompleted ? .white.opacity(0.35) : .white)
+                                .strikethrough(sub.isCompleted, color: .white.opacity(0.3))
+
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                    }
+                }
+                .padding(.bottom, 8)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .padding(16)
         .frame(minWidth: 350, maxWidth: 350, minHeight: 100, alignment: .leading)
         .background(
             ZStack {
@@ -1041,8 +1097,9 @@ struct TaskFormView: View {
                             Text("Add details, links, context…")
                                 .foregroundColor(.white.opacity(0.28))
                                 .font(.callout)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 12)
+                                .padding(.leading, 5)
+                                .padding(.top, 8)
+                                .allowsHitTesting(false)
                         }
                         TextEditor(text: $notes)
                             .font(.callout)
