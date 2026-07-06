@@ -1,4 +1,5 @@
 import SwiftUI
+import LocalAuthentication
 
 struct ContentView: View {
     @AppStorage("darkModeEnabled")    private var darkModeEnabled    = true
@@ -6,6 +7,10 @@ struct ContentView: View {
     @AppStorage("textSizeOption")     private var textSizeOption     = "default"
     @AppStorage("tabOrder")           private var tabOrder           = "tasks,canvas,settings,profile"
     @AppStorage("pomodoroPlacement")  private var pomodoroPlacement  = "corner"
+    @AppStorage("appLockEnabled")     private var appLockEnabled     = false
+    @AppStorage("selectedTheme")      private var selectedTheme      = "original"
+    @State private var isLocked = false
+    @Environment(\.scenePhase) private var scenePhase
 
     private var fontDesign: Font.Design {
         switch selectedFontDesign {
@@ -51,6 +56,27 @@ struct ContentView: View {
         .tint(.white)
         .toolbarBackground(.hidden, for: .tabBar)
         .preferredColorScheme(darkModeEnabled ? .dark : .light)
+        .overlay {
+            if isLocked && appLockEnabled {
+                LockScreenOverlay(theme: AppThemes.find(selectedTheme), onUnlock: authenticate)
+                    .transition(.opacity)
+                    .zIndex(999)
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background, appLockEnabled { isLocked = true }
+            else if phase == .active, appLockEnabled, isLocked { authenticate() }
+        }
+    }
+
+    private func authenticate() {
+        let ctx = LAContext()
+        var error: NSError?
+        let policy: LAPolicy = ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+            ? .deviceOwnerAuthenticationWithBiometrics : .deviceOwnerAuthentication
+        ctx.evaluatePolicy(policy, localizedReason: "Unlock Daypilot") { success, _ in
+            DispatchQueue.main.async { if success { isLocked = false } }
+        }
     }
 
     @ViewBuilder
@@ -84,6 +110,40 @@ struct ContentView: View {
         case "profile":  return "person.circle"
         case "focus":    return "timer"
         default:         return "circle"
+        }
+    }
+}
+
+private struct LockScreenOverlay: View {
+    let theme: ThemeOption
+    let onUnlock: () -> Void
+
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color(white: 0.04), theme.color1.opacity(0.6)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                .ignoresSafeArea()
+            VStack(spacing: 24) {
+                Image(systemName: "metronome.fill")
+                    .font(.system(size: 52, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.85))
+                Text("Daypilot")
+                    .font(.title.weight(.bold))
+                    .foregroundColor(.white)
+                Button(action: onUnlock) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "faceid")
+                        Text("Unlock")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 36).padding(.vertical, 14)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 }

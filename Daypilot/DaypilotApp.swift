@@ -131,8 +131,12 @@ class Daypilot: Identifiable {
     
     var title: String
     var dueDate: Date?
-    var urgency: UrgencyLevel
+    var urgency: UrgencyLevel = .notUrgent
     var isCompleted: Bool = false
+    var createdAt: Date = Date()
+    var notes: String? = nil
+    @Relationship(deleteRule: .cascade) var subtasks: [Daypilot] = []
+    var parent: Daypilot? = nil
     
     var statusRaw: String = TaskStatus.open.rawValue
     var progress: Int = 0

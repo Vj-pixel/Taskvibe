@@ -11,6 +11,7 @@ struct SettingsView: View {
 
     @AppStorage("notificationsEnabled")  private var notificationsEnabled  = true
     @AppStorage("selectedTheme")         private var selectedTheme         = "original"
+    @AppStorage("appLockEnabled")        private var appLockEnabled        = false
     @AppStorage("selectedFontDesign")    private var selectedFontDesign    = "default"
     @AppStorage("progressDisplayStyle")  private var progressDisplayStyle  = "segmented"
     @AppStorage("textSizeOption")        private var textSizeOption        = "default"
@@ -149,6 +150,20 @@ struct SettingsView: View {
                     }
                     NavigationLink(destination: FeedbackFormView(type: .bug).environmentObject(gradientManager)) {
                         SettingsIconRow(systemImage: "ladybug.fill", label: "Report a Bug", iconColor: .red)
+                    }
+                }
+                .listRowBackground(Color.white.opacity(0.10))
+
+                // MARK: Privacy
+                Section(header: sectionHeader("Privacy")) {
+                    Toggle(isOn: $appLockEnabled) {
+                        SettingsIconRow(systemImage: "faceid", label: "App Lock", iconColor: .blue)
+                    }
+                    .tint(AppThemes.find(selectedTheme).accentColor)
+                    if appLockEnabled {
+                        Label("Face ID or passcode required when reopening the app.", systemImage: "lock.shield.fill")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.5))
                     }
                 }
                 .listRowBackground(Color.white.opacity(0.10))

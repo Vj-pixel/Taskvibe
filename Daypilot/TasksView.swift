@@ -312,6 +312,13 @@ struct TaskContentView: View {
                     .font(.caption2)
                     .foregroundColor(.primary.opacity(0.6))
 
+                if !task.subtasks.isEmpty {
+                    let done = task.subtasks.filter(\.isCompleted).count
+                    Label("\(done)/\(task.subtasks.count) subtasks", systemImage: done == task.subtasks.count ? "checkmark.square.fill" : "square.split.bottomrightquarter")
+                        .font(.caption2)
+                        .foregroundColor(done == task.subtasks.count ? .green.opacity(0.8) : .white.opacity(0.55))
+                }
+
                 // Attachment image thumbnail
                 if let img = task.attachmentImage {
                     Image(uiImage: img)
@@ -742,11 +749,13 @@ struct TaskFormView: View {
     @Binding var taskEmoji: String
     @Binding var attachmentImagePath: String?
     @Binding var userTag: String
+    @Binding var notes: String
 
     var onSave: () -> Void
     var isEditing: Bool = false
     var task: Daypilot? = nil
 
+    @Environment(\.modelContext) private var modelContext
     @AppStorage("selectedTheme") private var selectedTheme = "original"
     private var theme: ThemeOption { AppThemes.find(selectedTheme) }
 
@@ -754,6 +763,8 @@ struct TaskFormView: View {
     @State private var showEmojiPicker = false
     @State private var selectedPhoto: PhotosPickerItem? = nil
     @State private var attachmentPreview: UIImage? = nil
+    @State private var parsedDetails: ParsedTaskDetails? = nil
+    @State private var newSubtaskTitle: String = ""
 
     private let commonEmojis = ["🏋️","🧘","🏃","🚴","🍎","💧","📚","✏️","💡","🎯","🧹","💰","🎵","🎨","🌿","😴","🧠","❤️","🌟","⚡","🔥","🏆","🧪","💻","📱","🗓","🍳","🚿","🌅","🎉"]
 
@@ -769,6 +780,51 @@ struct TaskFormView: View {
 
                 TextField("Enter task name", text: $toDoTitle)
                     .glassFieldStyle()
+                    .onChange(of: toDoTitle) { _, val in
+                        guard !val.isEmpty else { parsedDetails = nil; return }
+                        Task {
+                            try? await Task.sleep(nanoseconds: 300_000_000)
+                            let result = NLTaskParser.parse(val)
+                            await MainActor.run {
+                                if result.detectedDate != nil || result.detectedUrgency != nil {
+                                    parsedDetails = result
+                                } else {
+                                    parsedDetails = nil
+                                }
+                            }
+                        }
+                    }
+
+                if let parsed = parsedDetails {
+                    HStack(spacing: 8) {
+                        Image(systemName: "wand.and.stars").font(.caption)
+                        if let d = parsed.detectedDate {
+                            Text(d.formatted(.dateTime.weekday().month().day()))
+                                .font(.caption.weight(.medium))
+                        }
+                        if let u = parsed.detectedUrgency {
+                            Text("· \(u.rawValue)").font(.caption)
+                        }
+                        Spacer()
+                        Button("Apply") {
+                            if let d = parsed.detectedDate { selectedDate = d }
+                            if let u = parsed.detectedUrgency { selectedUrgency = u }
+                            toDoTitle = parsed.cleanTitle
+                            parsedDetails = nil
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(theme.accentColor)
+                        Button { parsedDetails = nil } label: {
+                            Image(systemName: "xmark").font(.caption2)
+                        }
+                        .foregroundColor(.white.opacity(0.4))
+                    }
+                    .foregroundColor(.white.opacity(0.85))
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(Color.white.opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
 
                 DatePicker("Due Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
 
@@ -976,6 +1032,82 @@ struct TaskFormView: View {
                     .foregroundColor(.secondary)
                 }
 
+                // ── Notes ────────────────────────────────────────────────
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Notes")
+                        .font(.subheadline).foregroundColor(.secondary)
+                    ZStack(alignment: .topLeading) {
+                        if notes.isEmpty {
+                            Text("Add details, links, context…")
+                                .foregroundColor(.white.opacity(0.28))
+                                .font(.callout)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                        }
+                        TextEditor(text: $notes)
+                            .font(.callout)
+                            .frame(minHeight: 72, maxHeight: 140)
+                            .scrollContentBackground(.hidden)
+                    }
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.18), lineWidth: 1))
+                }
+
+                // ── Subtasks (edit mode, tasks only) ─────────────────────
+                if isEditing, selectedType == .task, let task {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Subtasks")
+                            .font(.subheadline).foregroundColor(.secondary)
+
+                        if !task.subtasks.isEmpty {
+                            VStack(spacing: 6) {
+                                ForEach(task.subtasks) { sub in
+                                    HStack(spacing: 10) {
+                                        Button {
+                                            sub.isCompleted.toggle()
+                                            try? modelContext.save()
+                                        } label: {
+                                            Image(systemName: sub.isCompleted ? "checkmark.circle.fill" : "circle")
+                                                .foregroundColor(sub.isCompleted ? .green : .white.opacity(0.4))
+                                        }
+                                        .buttonStyle(.plain)
+                                        Text(sub.title)
+                                            .font(.callout)
+                                            .foregroundColor(sub.isCompleted ? .white.opacity(0.4) : .white)
+                                            .strikethrough(sub.isCompleted)
+                                        Spacer()
+                                        Button {
+                                            modelContext.delete(sub)
+                                            try? modelContext.save()
+                                        } label: {
+                                            Image(systemName: "xmark").font(.caption2).foregroundColor(.white.opacity(0.3))
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    .padding(.horizontal, 12).padding(.vertical, 8)
+                                    .background(Color.white.opacity(0.07))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                            }
+                        }
+
+                        HStack(spacing: 8) {
+                            TextField("Add subtask…", text: $newSubtaskTitle)
+                                .glassFieldStyle()
+                                .submitLabel(.done)
+                                .onSubmit { addSubtask(to: task) }
+                            Button { addSubtask(to: task) } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(newSubtaskTitle.isEmpty ? .white.opacity(0.25) : theme.accentColor)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(newSubtaskTitle.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+                    }
+                }
+
                 // ── Actions ──────────────────────────────────────────────
                 FormActionButton(title: isEditing ? "Update" : "Add",
                                 colors: [theme.accentColor, theme.color2, theme.color3]) {
@@ -1009,6 +1141,17 @@ struct TaskFormView: View {
         } else {
             onSave()
         }
+    }
+
+    private func addSubtask(to parent: Daypilot) {
+        let trimmed = newSubtaskTitle.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let sub = Daypilot(title: trimmed, urgency: .notUrgent, type: .task)
+        sub.parent = parent
+        modelContext.insert(sub)
+        try? modelContext.save()
+        newSubtaskTitle = ""
+        HapticEngine.impact(.light)
     }
 
     private func descriptionFor(_ freq: HabitFrequency) -> String {
@@ -1184,6 +1327,50 @@ struct ConfettiView: View {
     }
 }
 
+// MARK: - Streak Share Card (solid gradient — ImageRenderer can't capture UIKit blur)
+
+struct StreakShareCardView: View {
+    let streak: Int
+    let habitName: String
+    let theme: ThemeOption
+
+    private var milestoneEmoji: String {
+        switch streak {
+        case 3: return "🌱"; case 7: return "🔥"; case 14: return "💪"
+        case 30: return "⭐"; case 60: return "🌟"; case 100: return "💎"
+        case 365: return "🏆"; default: return "🔥"
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [theme.color1, theme.color2, theme.color3],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            VStack(spacing: 14) {
+                Text(milestoneEmoji).font(.system(size: 64))
+                Text("\(streak)")
+                    .font(.system(size: 80, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                Text("Day Streak")
+                    .font(.title.weight(.bold)).foregroundColor(.white)
+                if !habitName.isEmpty {
+                    Text(habitName)
+                        .font(.headline).foregroundColor(.white.opacity(0.75))
+                }
+                Divider().background(Color.white.opacity(0.3)).padding(.horizontal, 40)
+                HStack(spacing: 6) {
+                    Image(systemName: "metronome.fill")
+                    Text("Daypilot")
+                }
+                .font(.subheadline.weight(.medium)).foregroundColor(.white.opacity(0.6))
+            }
+            .padding(32)
+        }
+        .frame(width: 340, height: 380)
+        .clipShape(RoundedRectangle(cornerRadius: 28))
+    }
+}
+
 // MARK: - Celebration Overlay
 
 struct CelebrationOverlay: View {
@@ -1191,8 +1378,11 @@ struct CelebrationOverlay: View {
     let habitName: String
     let onDismiss: () -> Void
 
+    @AppStorage("selectedTheme") private var selectedTheme = "original"
     @State private var cardScale: CGFloat = 0.65
     @State private var cardOpacity: Double = 0
+
+    private var theme: ThemeOption { AppThemes.find(selectedTheme) }
 
     private var milestoneEmoji: String {
         switch streak {
@@ -1230,10 +1420,26 @@ struct CelebrationOverlay: View {
                         .font(.subheadline)
                         .foregroundColor(.white.opacity(0.72))
                 }
+
+                Button {
+                    shareStreakCard()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("Share")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24).padding(.vertical, 10)
+                    .background(Color.white.opacity(0.18))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+
                 Text("Tap anywhere to continue")
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.45))
-                    .padding(.top, 6)
+                    .padding(.top, 2)
             }
             .padding(40)
             .background(.ultraThinMaterial)
@@ -1249,8 +1455,29 @@ struct CelebrationOverlay: View {
                 cardScale = 1.0
                 cardOpacity = 1.0
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) { onDismiss() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) { onDismiss() }
         }
+    }
+
+    private func shareStreakCard() {
+        let card = StreakShareCardView(streak: streak, habitName: habitName, theme: theme)
+        let renderer = ImageRenderer(content: card)
+        renderer.scale = 3.0
+        guard let img = renderer.uiImage else { return }
+        let vc = UIActivityViewController(activityItems: [img], applicationActivities: nil)
+        guard let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+              let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController
+        else { return }
+        var top = root
+        while let presented = top.presentedViewController { top = presented }
+        if let pop = vc.popoverPresentationController {
+            pop.sourceView = top.view
+            pop.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 0, height: 0)
+            pop.permittedArrowDirections = []
+        }
+        top.present(vc, animated: true)
+        HapticEngine.impact(.light)
     }
 }
 
@@ -1288,6 +1515,7 @@ struct TasksView: View {
     @State private var formEmoji: String = ""
     @State private var formAttachmentImagePath: String? = nil
     @State private var formUserTag: String = ""
+    @State private var formNotes: String = ""
     @State private var isSearching: Bool = false
     @State private var searchText: String = ""
     @State private var selectedTagFilter: String? = nil
@@ -1594,7 +1822,7 @@ struct TasksView: View {
     }
 
     private var filteredAndSortedDaypilots: [Daypilot] {
-        var base = daypilots.filter { !$0.isCompleted || $0.uuid == disappearingTaskID }
+        var base = daypilots.filter { ($0.parent == nil) && (!$0.isCompleted || $0.uuid == disappearingTaskID) }
 
         // Search filter
         if !searchText.isEmpty {
@@ -1654,6 +1882,7 @@ struct TasksView: View {
             taskEmoji: $formEmoji,
             attachmentImagePath: $formAttachmentImagePath,
             userTag: $formUserTag,
+            notes: $formNotes,
             onSave: addTask
         )
     }
@@ -1672,6 +1901,7 @@ struct TasksView: View {
             taskEmoji: $formEmoji,
             attachmentImagePath: $formAttachmentImagePath,
             userTag: $formUserTag,
+            notes: $formNotes,
             onSave: updateTask,
             isEditing: true,
             task: editingTask
@@ -1752,6 +1982,7 @@ struct TasksView: View {
         formEmoji = task.taskEmoji ?? ""
         formAttachmentImagePath = task.attachmentImagePath
         formUserTag = task.userTag ?? ""
+        formNotes = task.notes ?? ""
         isEditingSheetShowing = true
     }
 
@@ -1767,6 +1998,7 @@ struct TasksView: View {
         formEmoji = ""
         formAttachmentImagePath = nil
         formUserTag = ""
+        formNotes = ""
     }
 
     private func addTask() {
@@ -1787,6 +2019,7 @@ struct TasksView: View {
         if !formEmoji.isEmpty { newTask.taskEmoji = formEmoji }
         newTask.attachmentImagePath = formAttachmentImagePath
         newTask.userTag = formUserTag.isEmpty ? nil : formUserTag
+        newTask.notes = formNotes.isEmpty ? nil : formNotes
         modelContext.insert(newTask)
         do {
             try modelContext.save()
@@ -1813,6 +2046,7 @@ struct TasksView: View {
         task.taskEmoji = formEmoji.isEmpty ? nil : formEmoji
         task.attachmentImagePath = formAttachmentImagePath
         task.userTag = formUserTag.isEmpty ? nil : formUserTag
+        task.notes = formNotes.isEmpty ? nil : formNotes
         do {
             try modelContext.save()
             scheduleHabitNotifications(for: task)
