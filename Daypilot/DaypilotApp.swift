@@ -131,7 +131,7 @@ class Daypilot: Identifiable {
     
     var title: String
     var dueDate: Date?
-    var urgency: UrgencyLevel = .notUrgent
+    var urgencyRaw: String = UrgencyLevel.notUrgent.rawValue
     var isCompleted: Bool = false
     var createdAt: Date = Date()
     var notes: String? = nil
@@ -167,6 +167,11 @@ class Daypilot: Identifiable {
     }
     
     // Computed properties
+    var urgency: UrgencyLevel {
+        get { UrgencyLevel(rawValue: urgencyRaw) ?? .notUrgent }
+        set { urgencyRaw = newValue.rawValue }
+    }
+
     var type: TaskType {
         get { TaskType(rawValue: typeRaw) ?? .task }
         set { typeRaw = newValue.rawValue }
@@ -198,7 +203,7 @@ class Daypilot: Identifiable {
         self.title = title
         self.isCompleted = isCompleted
         self.dueDate = dueDate
-        self.urgency = urgency
+        self.urgencyRaw = urgency.rawValue
         self.statusRaw = status.rawValue
         self.progress = progress
         self.typeRaw = type.rawValue
