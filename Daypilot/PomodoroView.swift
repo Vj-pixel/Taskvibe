@@ -167,6 +167,21 @@ struct PomodoroView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
+        .onChange(of: focusMinutes) { _, val in
+            guard !isRunning, sessionLabel == "Focus" else { return }
+            totalSeconds = val * 60
+            secondsLeft  = val * 60
+        }
+        .onChange(of: shortBreakMinutes) { _, val in
+            guard !isRunning, sessionLabel == "Short Break" else { return }
+            totalSeconds = val * 60
+            secondsLeft  = val * 60
+        }
+        .onChange(of: longBreakMinutes) { _, val in
+            guard !isRunning, sessionLabel == "Long Break" else { return }
+            totalSeconds = val * 60
+            secondsLeft  = val * 60
+        }
     }
 
     // MARK: - Timer Settings Sheet
@@ -181,7 +196,7 @@ struct PomodoroView: View {
                 Text("Timer Durations")
                     .font(.title3.weight(.bold))
                     .foregroundColor(.white)
-                    .padding(.top, 8)
+                    .padding(.top, 28)
 
                 VStack(spacing: 16) {
                     timerRow(label: "Focus", icon: "brain.head.profile", minutes: $focusMinutes, range: 1...90)
@@ -189,10 +204,6 @@ struct PomodoroView: View {
                     timerRow(label: "Long Break", icon: "moon.fill", minutes: $longBreakMinutes, range: 1...60)
                 }
                 .padding(.horizontal, 24)
-
-                Text("Changes take effect when you switch presets.")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.5))
 
                 Spacer()
             }
