@@ -806,6 +806,7 @@ struct TaskFormView: View {
     @Binding var attachmentImagePath: String?
     @Binding var userTag: String
     @Binding var notes: String
+    @Binding var pendingSubtaskTitles: [String]
 
     var onSave: () -> Void
     var isEditing: Bool = false
@@ -1111,13 +1112,14 @@ struct TaskFormView: View {
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.18), lineWidth: 1))
                 }
 
-                // ── Subtasks (edit mode, tasks only) ─────────────────────
-                if isEditing, selectedType == .task, let task {
+                // ── Subtasks ──────────────────────────────────────────────
+                if selectedType == .task {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Subtasks")
                             .font(.subheadline).foregroundColor(.secondary)
 
-                        if !task.subtasks.isEmpty {
+                        // Existing subtasks (edit mode)
+                        if isEditing, let task, !task.subtasks.isEmpty {
                             VStack(spacing: 6) {
                                 ForEach(task.subtasks) { sub in
                                     HStack(spacing: 10) {
@@ -1149,12 +1151,39 @@ struct TaskFormView: View {
                             }
                         }
 
+                        // Pending subtasks (creation mode)
+                        if !isEditing && !pendingSubtaskTitles.isEmpty {
+                            VStack(spacing: 6) {
+                                ForEach(Array(pendingSubtaskTitles.enumerated()), id: \.offset) { idx, title in
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "circle")
+                                            .foregroundColor(.white.opacity(0.3))
+                                            .font(.system(size: 14))
+                                        Text(title)
+                                            .font(.callout)
+                                            .foregroundColor(.white)
+                                        Spacer()
+                                        Button {
+                                            pendingSubtaskTitles.remove(at: idx)
+                                        } label: {
+                                            Image(systemName: "xmark").font(.caption2).foregroundColor(.white.opacity(0.3))
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    .padding(.horizontal, 12).padding(.vertical, 8)
+                                    .background(Color.white.opacity(0.07))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                            }
+                        }
+
+                        // Add subtask input
                         HStack(spacing: 8) {
                             TextField("Add subtask…", text: $newSubtaskTitle)
                                 .glassFieldStyle()
                                 .submitLabel(.done)
-                                .onSubmit { addSubtask(to: task) }
-                            Button { addSubtask(to: task) } label: {
+                                .onSubmit { commitSubtask() }
+                            Button { commitSubtask() } label: {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.system(size: 24))
                                     .foregroundColor(newSubtaskTitle.isEmpty ? .white.opacity(0.25) : theme.accentColor)
@@ -1200,13 +1229,18 @@ struct TaskFormView: View {
         }
     }
 
-    private func addSubtask(to parent: Daypilot) {
+    private func commitSubtask() {
         let trimmed = newSubtaskTitle.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
-        let sub = Daypilot(title: trimmed, urgency: .notUrgent, type: .task)
-        sub.parent = parent
-        modelContext.insert(sub)
-        try? modelContext.save()
+        if isEditing, let parent = task {
+            let sub = Daypilot(title: trimmed, urgency: .notUrgent, type: .task)
+            sub.parent = parent
+            parent.subtasks.append(sub)
+            modelContext.insert(sub)
+            try? modelContext.save()
+        } else {
+            pendingSubtaskTitles.append(trimmed)
+        }
         newSubtaskTitle = ""
         HapticEngine.impact(.light)
     }
@@ -1573,6 +1607,7 @@ struct TasksView: View {
     @State private var formAttachmentImagePath: String? = nil
     @State private var formUserTag: String = ""
     @State private var formNotes: String = ""
+    @State private var pendingSubtaskTitles: [String] = []
     @State private var isSearching: Bool = false
     @State private var searchText: String = ""
     @State private var selectedTagFilter: String? = nil
@@ -1940,6 +1975,7 @@ struct TasksView: View {
             attachmentImagePath: $formAttachmentImagePath,
             userTag: $formUserTag,
             notes: $formNotes,
+            pendingSubtaskTitles: $pendingSubtaskTitles,
             onSave: addTask
         )
     }
@@ -1959,6 +1995,7 @@ struct TasksView: View {
             attachmentImagePath: $formAttachmentImagePath,
             userTag: $formUserTag,
             notes: $formNotes,
+            pendingSubtaskTitles: .constant([]),
             onSave: updateTask,
             isEditing: true,
             task: editingTask
@@ -2056,6 +2093,7 @@ struct TasksView: View {
         formAttachmentImagePath = nil
         formUserTag = ""
         formNotes = ""
+        pendingSubtaskTitles = []
     }
 
     private func addTask() {
@@ -2078,6 +2116,12 @@ struct TasksView: View {
         newTask.userTag = formUserTag.isEmpty ? nil : formUserTag
         newTask.notes = formNotes.isEmpty ? nil : formNotes
         modelContext.insert(newTask)
+        for title in pendingSubtaskTitles {
+            let sub = Daypilot(title: title, urgency: .notUrgent, type: .task)
+            sub.parent = newTask
+            newTask.subtasks.append(sub)
+            modelContext.insert(sub)
+        }
         do {
             try modelContext.save()
             scheduleHabitNotifications(for: newTask)
