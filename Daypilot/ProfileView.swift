@@ -134,6 +134,7 @@ struct ProfileView: View {
     @State private var showReauthSheet = false
     @State private var authProvider = ""
     @State private var showTaskHistory = false
+    @State private var showWeeklyReview = false
 
     private var theme: ThemeOption { AppThemes.find(selectedTheme) }
 
@@ -372,21 +373,36 @@ struct ProfileView: View {
 
     private var accountSection: some View {
         VStack(spacing: 10) {
-            Button { showTaskHistory = true } label: {
-                HStack {
-                    Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
-                    Text("Task History")
-                        .fontWeight(.semibold)
+            HStack(spacing: 10) {
+                Button { showTaskHistory = true } label: {
+                    HStack {
+                        Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                        Text("History")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
                 }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
-            }
-            .sheet(isPresented: $showTaskHistory) {
-                TaskHistoryView()
+                .sheet(isPresented: $showTaskHistory) { TaskHistoryView() }
+
+                Button { showWeeklyReview = true } label: {
+                    HStack {
+                        Image(systemName: "chart.bar.fill")
+                        Text("Review")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                }
+                .sheet(isPresented: $showWeeklyReview) { WeeklyReviewView() }
             }
 
             Button(action: signOut) {

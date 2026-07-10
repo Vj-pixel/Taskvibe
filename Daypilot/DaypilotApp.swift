@@ -135,6 +135,7 @@ class Daypilot: Identifiable {
     var isCompleted: Bool = false
     var createdAt: Date = Date()
     var notes: String? = nil
+    var reminderTime: Date? = nil
     @Relationship(deleteRule: .cascade) var subtasks: [Daypilot] = []
     var parent: Daypilot? = nil
     

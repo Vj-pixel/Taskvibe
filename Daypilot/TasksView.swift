@@ -807,6 +807,8 @@ struct TaskFormView: View {
     @Binding var userTag: String
     @Binding var notes: String
     @Binding var pendingSubtaskTitles: [String]
+    @Binding var reminderEnabled: Bool
+    @Binding var reminderTime: Date
 
     var onSave: () -> Void
     var isEditing: Bool = false
@@ -816,6 +818,7 @@ struct TaskFormView: View {
     @AppStorage("selectedTheme") private var selectedTheme = "original"
     private var theme: ThemeOption { AppThemes.find(selectedTheme) }
 
+    @StateObject private var voiceRecorder = VoiceTaskRecorder()
     @State private var showAdvancedOptions = false
     @State private var showEmojiPicker = false
     @State private var selectedPhoto: PhotosPickerItem? = nil
@@ -835,9 +838,30 @@ struct TaskFormView: View {
                 }
                 .pickerStyle(.segmented)
 
-                TextField("Enter task name", text: $toDoTitle)
-                    .glassFieldStyle()
-                    .onChange(of: toDoTitle) { _, val in
+                HStack(spacing: 8) {
+                    TextField("Enter task name", text: $toDoTitle)
+                        .glassFieldStyle()
+                    Button {
+                        voiceRecorder.toggle { text in
+                            toDoTitle = text
+                        }
+                    } label: {
+                        Image(systemName: voiceRecorder.isRecording ? "waveform.circle.fill" : "mic.circle")
+                            .font(.system(size: 28))
+                            .foregroundColor(voiceRecorder.isRecording ? .red : theme.accentColor)
+                            .symbolEffect(.pulse, isActive: voiceRecorder.isRecording)
+                    }
+                    .buttonStyle(.plain)
+                    .alert("Microphone Access Required", isPresented: $voiceRecorder.denied) {
+                        Button("Open Settings") {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    }
+                }
+                .onChange(of: toDoTitle) { _, val in
                         guard !val.isEmpty else { parsedDetails = nil; return }
                         Task {
                             try? await Task.sleep(nanoseconds: 300_000_000)
@@ -932,6 +956,22 @@ struct TaskFormView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
+
+                            // Reminder time
+                            VStack(alignment: .leading, spacing: 8) {
+                                Toggle(isOn: $reminderEnabled) {
+                                    Label("Daily Reminder", systemImage: "bell.fill")
+                                        .font(.subheadline)
+                                }
+                                .tint(theme.accentColor)
+                                if reminderEnabled {
+                                    DatePicker("Time", selection: $reminderTime, displayedComponents: .hourAndMinute)
+                                        .datePickerStyle(.graphical)
+                                        .tint(theme.accentColor)
+                                        .transition(.move(edge: .top).combined(with: .opacity))
+                                }
+                            }
+                            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: reminderEnabled)
                         }
 
                         // Status + Progress (editing tasks only)
@@ -1608,6 +1648,8 @@ struct TasksView: View {
     @State private var formUserTag: String = ""
     @State private var formNotes: String = ""
     @State private var pendingSubtaskTitles: [String] = []
+    @State private var formReminderEnabled: Bool = false
+    @State private var formReminderTime: Date = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()
     @State private var isSearching: Bool = false
     @State private var searchText: String = ""
     @State private var selectedTagFilter: String? = nil
@@ -1976,6 +2018,8 @@ struct TasksView: View {
             userTag: $formUserTag,
             notes: $formNotes,
             pendingSubtaskTitles: $pendingSubtaskTitles,
+            reminderEnabled: $formReminderEnabled,
+            reminderTime: $formReminderTime,
             onSave: addTask
         )
     }
@@ -1996,6 +2040,8 @@ struct TasksView: View {
             userTag: $formUserTag,
             notes: $formNotes,
             pendingSubtaskTitles: .constant([]),
+            reminderEnabled: $formReminderEnabled,
+            reminderTime: $formReminderTime,
             onSave: updateTask,
             isEditing: true,
             task: editingTask
@@ -2077,6 +2123,12 @@ struct TasksView: View {
         formAttachmentImagePath = task.attachmentImagePath
         formUserTag = task.userTag ?? ""
         formNotes = task.notes ?? ""
+        if let rt = task.reminderTime {
+            formReminderEnabled = true
+            formReminderTime = rt
+        } else {
+            formReminderEnabled = false
+        }
         isEditingSheetShowing = true
     }
 
@@ -2094,6 +2146,8 @@ struct TasksView: View {
         formUserTag = ""
         formNotes = ""
         pendingSubtaskTitles = []
+        formReminderEnabled = false
+        formReminderTime = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()
     }
 
     private func addTask() {
@@ -2115,6 +2169,7 @@ struct TasksView: View {
         newTask.attachmentImagePath = formAttachmentImagePath
         newTask.userTag = formUserTag.isEmpty ? nil : formUserTag
         newTask.notes = formNotes.isEmpty ? nil : formNotes
+        newTask.reminderTime = formReminderEnabled ? formReminderTime : nil
         modelContext.insert(newTask)
         for title in pendingSubtaskTitles {
             let sub = Daypilot(title: title, urgency: .notUrgent, type: .task)
@@ -2148,6 +2203,7 @@ struct TasksView: View {
         task.attachmentImagePath = formAttachmentImagePath
         task.userTag = formUserTag.isEmpty ? nil : formUserTag
         task.notes = formNotes.isEmpty ? nil : formNotes
+        task.reminderTime = formReminderEnabled ? formReminderTime : nil
         do {
             try modelContext.save()
             scheduleHabitNotifications(for: task)

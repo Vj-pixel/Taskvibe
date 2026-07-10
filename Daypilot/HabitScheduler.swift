@@ -67,7 +67,8 @@ struct HabitScheduler {
         content.sound = .default
 
         let cal = Calendar.current
-        let hourMinute = cal.dateComponents([.hour, .minute], from: startDate)
+        let timeSource = task.reminderTime ?? startDate
+        let hourMinute = cal.dateComponents([.hour, .minute], from: timeSource)
 
         switch task.habitFrequency {
         case .daily:
