@@ -472,6 +472,7 @@ struct ProfileView: View {
             email = user.email ?? ""
             authProvider = user.providerData.first?.providerID ?? ""
             if let photoURL = user.photoURL { loadProfileImage(from: photoURL) }
+            UserDefaults.standard.set(displayName, forKey: "cachedDisplayName")
         }
         updateTaskStats()
     }

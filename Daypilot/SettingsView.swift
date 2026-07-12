@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage("selectedTheme")         private var selectedTheme         = "original"
     @AppStorage("appLockEnabled")        private var appLockEnabled        = false
     @AppStorage("selectedFontDesign")    private var selectedFontDesign    = "default"
+    @AppStorage("selectedFontWeight")    private var selectedFontWeight    = "regular"
     @AppStorage("progressDisplayStyle")  private var progressDisplayStyle  = "segmented"
     @AppStorage("textSizeOption")        private var textSizeOption        = "default"
     @AppStorage("tabOrder")              private var tabOrder              = "tasks,canvas,settings,profile"
@@ -56,6 +57,18 @@ struct SettingsView: View {
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.5))
                         }
+                    }
+
+                    HStack {
+                        Text("Font Weight").foregroundColor(.white)
+                        Spacer()
+                        Picker("", selection: $selectedFontWeight) {
+                            Text("Light").tag("light")
+                            Text("Regular").tag("regular")
+                            Text("Semibold").tag("semibold")
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
                     }
 
                     NavigationLink(destination: ProgressStylePickerView().environmentObject(gradientManager)) {
@@ -205,7 +218,7 @@ struct SettingsView: View {
     private var fontDisplayName: String {
         switch selectedFontDesign {
         case "rounded":    return "Rounded"
-        case "serif":      return "Serif"
+        case "serif":      return "New York"
         case "monospaced": return "Monospaced"
         default:           return "System"
         }
@@ -531,7 +544,7 @@ struct FeedbackFormView: View {
     enum FeedbackType {
         case feature, bug
         var title: String   { self == .bug ? "Report a Bug"       : "Suggest a Feature" }
-        var subject: String { self == .bug ? "Bug Report — Momentum" : "Feature Request — Momentum" }
+        var subject: String { self == .bug ? "Bug Report — Taskvibe" : "Feature Request — Taskvibe" }
         var placeholder: String {
             self == .bug
                 ? "Describe the bug: what happened, what you expected, and steps to reproduce..."
@@ -547,6 +560,7 @@ struct FeedbackFormView: View {
 
     @State private var text = ""
     @State private var showCopied = false
+    @State private var showMailComposer = false
 
     private let recipientEmail = "jawwnnnsmith091@gmail.com"
     private var isEmpty: Bool { text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
@@ -569,9 +583,6 @@ struct FeedbackFormView: View {
                     Text(type.title)
                         .font(.title3.bold())
                         .foregroundColor(.white)
-                    Text("Send to \(recipientEmail)")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.4))
                 }
                 .padding(.top, 24)
                 .padding(.bottom, 20)
@@ -628,8 +639,7 @@ struct FeedbackFormView: View {
                     .disabled(isEmpty)
 
                     Button {
-                        let content = "To: \(recipientEmail)\nSubject: \(type.subject)\n\n\(text)"
-                        UIPasteboard.general.string = content
+                        UIPasteboard.general.string = text
                         withAnimation { showCopied = true }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                             withAnimation { showCopied = false }
@@ -655,13 +665,61 @@ struct FeedbackFormView: View {
         .navigationTitle(type.title)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .sheet(isPresented: $showMailComposer) {
+            MailComposerView(
+                subject: type.subject,
+                body: text,
+                recipient: recipientEmail,
+                isPresented: $showMailComposer
+            )
+        }
     }
 
     private func sendViaEmail() {
-        guard let subject = type.subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let body = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "mailto:\(recipientEmail)?subject=\(subject)&body=\(body)") else { return }
-        UIApplication.shared.open(url)
+        if MailComposerView.canSend {
+            showMailComposer = true
+        } else {
+            // Fallback to mailto: for third-party mail clients
+            guard let subject = type.subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let body = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let url = URL(string: "mailto:\(recipientEmail)?subject=\(subject)&body=\(body)") else { return }
+            UIApplication.shared.open(url)
+        }
+    }
+}
+
+// MARK: - Mail Composer Wrapper
+
+import MessageUI
+
+struct MailComposerView: UIViewControllerRepresentable {
+    let subject: String
+    let body: String
+    let recipient: String
+    @Binding var isPresented: Bool
+
+    static var canSend: Bool { MFMailComposeViewController.canSendMail() }
+
+    func makeUIViewController(context: Context) -> MFMailComposeViewController {
+        let vc = MFMailComposeViewController()
+        vc.setToRecipients([recipient])
+        vc.setSubject(subject)
+        vc.setMessageBody(body, isHTML: false)
+        vc.mailComposeDelegate = context.coordinator
+        return vc
+    }
+
+    func updateUIViewController(_ uiViewController: MFMailComposeViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(isPresented: $isPresented) }
+
+    class Coordinator: NSObject, MFMailComposeViewControllerDelegate {
+        @Binding var isPresented: Bool
+        init(isPresented: Binding<Bool>) { _isPresented = isPresented }
+        func mailComposeController(_ controller: MFMailComposeViewController,
+                                   didFinishWith result: MFMailComposeResult, error: Error?) {
+            isPresented = false
+        }
     }
 }
 
@@ -796,7 +854,7 @@ struct FontPickerView: View {
     private let options: [(id: String, name: String)] = [
         ("default",    "System Default"),
         ("rounded",    "Rounded"),
-        ("serif",      "Serif"),
+        ("serif",      "New York"),
         ("monospaced", "Monospaced"),
     ]
 

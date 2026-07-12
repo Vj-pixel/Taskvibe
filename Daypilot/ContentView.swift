@@ -4,13 +4,16 @@ import LocalAuthentication
 struct ContentView: View {
     @AppStorage("darkModeEnabled")    private var darkModeEnabled    = true
     @AppStorage("selectedFontDesign") private var selectedFontDesign = "default"
+    @AppStorage("selectedFontWeight") private var selectedFontWeight = "regular"
     @AppStorage("textSizeOption")     private var textSizeOption     = "default"
     @AppStorage("tabOrder")           private var tabOrder           = "tasks,canvas,settings,profile"
     @AppStorage("pomodoroPlacement")  private var pomodoroPlacement  = "corner"
     @AppStorage("appLockEnabled")     private var appLockEnabled     = false
     @AppStorage("selectedTheme")      private var selectedTheme      = "original"
-    @State private var isLocked = false
+    @State private var selectedTab    = "tasks"
+    @State private var isLocked       = false
     @Environment(\.scenePhase) private var scenePhase
+    @Namespace private var tabPill
 
     private var fontDesign: Font.Design {
         switch selectedFontDesign {
@@ -18,6 +21,14 @@ struct ContentView: View {
         case "serif":      return .serif
         case "monospaced": return .monospaced
         default:           return .default
+        }
+    }
+
+    private var fontWeight: Font.Weight {
+        switch selectedFontWeight {
+        case "light":     return .light
+        case "semibold":  return .semibold
+        default:          return .regular
         }
     }
 
@@ -44,18 +55,28 @@ struct ContentView: View {
     }
 
     var body: some View {
-        TabView {
-            ForEach(orderedTabIds, id: \.self) { id in
-                tabContent(for: id)
-                    .tabItem { Label(tabLabel(for: id), systemImage: tabIcon(for: id)) }
-                    .tag(id)
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                ForEach(orderedTabIds, id: \.self) { id in
+                    tabContent(for: id)
+                        .tag(id)
+                        .toolbar(.hidden, for: .tabBar)
+                        .ignoresSafeArea(edges: .bottom)
+                }
             }
+            .fontDesign(fontDesign)
+            .fontWeight(fontWeight)
+            .dynamicTypeSize(dynamicTypeSize)
+            .tint(.white)
+            .preferredColorScheme(darkModeEnabled ? .dark : .light)
+
+            CustomTabBar(
+                tabs: orderedTabIds,
+                selected: $selectedTab,
+                theme: AppThemes.find(selectedTheme),
+                namespace: tabPill
+            )
         }
-        .fontDesign(fontDesign)
-        .dynamicTypeSize(dynamicTypeSize)
-        .tint(.white)
-        .toolbarBackground(.hidden, for: .tabBar)
-        .preferredColorScheme(darkModeEnabled ? .dark : .light)
         .overlay {
             if isLocked && appLockEnabled {
                 LockScreenOverlay(theme: AppThemes.find(selectedTheme), onUnlock: authenticate)
@@ -110,6 +131,73 @@ struct ContentView: View {
         case "profile":  return "person.circle"
         case "focus":    return "timer"
         default:         return "circle"
+        }
+    }
+}
+
+private struct CustomTabBar: View {
+    let tabs: [String]
+    @Binding var selected: String
+    let theme: ThemeOption
+    var namespace: Namespace.ID
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(tabs, id: \.self) { id in
+                Button {
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
+                        selected = id
+                    }
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: icon(id))
+                            .font(.system(size: 19, weight: .semibold))
+                        Text(label(id))
+                            .font(.system(size: 9, weight: .semibold))
+                    }
+                    .foregroundColor(selected == id ? .white : .white.opacity(0.38))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background {
+                        if selected == id {
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color.white.opacity(0.18))
+                                .matchedGeometryEffect(id: "tabPill", in: namespace)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.12), lineWidth: 1))
+        .shadow(color: .black.opacity(0.3), radius: 24, y: 8)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 12)
+    }
+
+    private func icon(_ id: String) -> String {
+        switch id {
+        case "tasks":    return "checklist"
+        case "canvas":   return "books.vertical"
+        case "settings": return "gear"
+        case "profile":  return "person.circle"
+        case "focus":    return "timer"
+        default:         return "circle"
+        }
+    }
+
+    private func label(_ id: String) -> String {
+        switch id {
+        case "tasks":    return "Tasks"
+        case "canvas":   return "Canvas"
+        case "settings": return "Settings"
+        case "profile":  return "Profile"
+        case "focus":    return "Focus"
+        default:         return id.capitalized
         }
     }
 }

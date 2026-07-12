@@ -20,6 +20,38 @@ struct HapticEngine {
     }
 }
 
+// MARK: - Typing Text
+
+struct TypingText: View {
+    let fullText: String
+    var speed: Double = 0.032
+
+    @State private var displayed = ""
+    @State private var charIndex = 0
+
+    var body: some View {
+        Text(displayed)
+            .onAppear { restart() }
+            .onChange(of: fullText) { restart() }
+    }
+
+    private func restart() {
+        displayed = ""
+        charIndex = 0
+        scheduleNext()
+    }
+
+    private func scheduleNext() {
+        guard charIndex < fullText.count else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + speed) {
+            let idx = fullText.index(fullText.startIndex, offsetBy: charIndex)
+            displayed.append(fullText[idx])
+            charIndex += 1
+            scheduleNext()
+        }
+    }
+}
+
 // MARK: - Glass TextField Style
 
 extension View {
@@ -389,7 +421,7 @@ struct TaskContentView: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .frame(minWidth: 350, maxWidth: 350, minHeight: 100, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 16)
@@ -405,6 +437,14 @@ struct TaskContentView: View {
                                 lineWidth: 1
                             )
                     )
+                // Left urgency accent strip
+                HStack(spacing: 0) {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(ringColor.opacity(isFutureHabit ? 0.3 : 0.85))
+                        .frame(width: 4)
+                    Spacer()
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 16))
                 if isFutureHabit {
                     FutureHabitStripes()
                 }
@@ -1657,6 +1697,9 @@ struct TasksView: View {
     @State private var pomodoroTask: Daypilot? = nil
     @State private var searchScope: SearchScope = .all
     @AppStorage("pomodoroPlacement") private var pomodoroPlacement = "corner"
+    @AppStorage("selectedTheme") private var selectedTheme = "original"
+    private var theme: ThemeOption { AppThemes.find(selectedTheme) }
+    private var cachedDisplayName: String { UserDefaults.standard.string(forKey: "cachedDisplayName") ?? "" }
 
     // Streak celebration
     @State private var streakMilestone: Int? = nil
@@ -1725,8 +1768,43 @@ struct TasksView: View {
         HabitScheduler.occursOn(task, date: date)
     }
 
+    private var greetingText: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let first = cachedDisplayName.components(separatedBy: " ").first ?? ""
+        let nameStr = first.isEmpty ? "" : ", \(first)"
+        let timeGreeting: String
+        switch hour {
+        case 5..<12:  timeGreeting = "Good morning\(nameStr) ☀️"
+        case 12..<17: timeGreeting = "Good afternoon\(nameStr) 👋"
+        case 17..<21: timeGreeting = "Good evening\(nameStr) 🌇"
+        default:      timeGreeting = "Working late\(nameStr)? 🌙"
+        }
+        let count = filteredAndSortedDaypilots.count
+        let taskStr: String
+        switch count {
+        case 0:     taskStr = "You're all caught up."
+        case 1:     taskStr = "1 task lined up."
+        case 2...3: taskStr = "\(count) things lined up."
+        case 4...7: taskStr = "Busy day — \(count) tasks."
+        default:    taskStr = "Big day — \(count) tasks to tackle."
+        }
+        return "\(timeGreeting)  \(taskStr)"
+    }
+
     private var mainContent: some View {
         VStack(spacing: 0) {
+            // Greeting banner
+            HStack {
+                TypingText(fullText: greetingText)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.white.opacity(0.85))
+                    .id(greetingText)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 10)
+
             MiniCalendarStrip(
                 displayedMonth: $calendarDisplayedMonth,
                 selectedDate: $selectedCalendarDate,
