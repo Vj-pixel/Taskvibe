@@ -11,6 +11,7 @@ struct SettingsView: View {
 
     @AppStorage("notificationsEnabled")  private var notificationsEnabled  = true
     @AppStorage("selectedTheme")         private var selectedTheme         = "original"
+    @AppStorage("themeMode")             private var themeMode             = "full"
     @AppStorage("appLockEnabled")        private var appLockEnabled        = false
     @AppStorage("selectedFontDesign")    private var selectedFontDesign    = "default"
     @AppStorage("selectedFontWeight")    private var selectedFontWeight    = "regular"
@@ -38,10 +39,12 @@ struct SettingsView: View {
                             let theme = AppThemes.find(selectedTheme)
                             HStack(spacing: -6) {
                                 Circle().fill(theme.color1).frame(width: 16, height: 16)
-                                Circle().fill(theme.color2).frame(width: 16, height: 16)
-                                Circle().fill(theme.color3).frame(width: 16, height: 16)
+                                if themeMode == "full" {
+                                    Circle().fill(theme.color2).frame(width: 16, height: 16)
+                                    Circle().fill(theme.color3).frame(width: 16, height: 16)
+                                }
                             }
-                            Text(theme.name)
+                            Text("\(theme.name) · \(themeMode == "accent" ? "Accent" : "Full")")
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.5))
                                 .padding(.leading, 6)
@@ -217,10 +220,16 @@ struct SettingsView: View {
 
     private var fontDisplayName: String {
         switch selectedFontDesign {
-        case "rounded":    return "Rounded"
-        case "serif":      return "New York"
-        case "monospaced": return "Monospaced"
-        default:           return "System"
+        case "rounded":     return "Rounded"
+        case "serif":       return "New York"
+        case "monospaced":  return "Monospaced"
+        case "avenirnext":  return "Avenir Next"
+        case "georgia":     return "Georgia"
+        case "baskerville": return "Baskerville"
+        case "didot":       return "Didot"
+        case "typewriter":  return "Typewriter"
+        case "gillsans":    return "Gill Sans"
+        default:            return "System"
         }
     }
 
@@ -851,39 +860,44 @@ struct FontPickerView: View {
     @AppStorage("selectedFontDesign") private var selectedFontDesign = "default"
     @EnvironmentObject private var gradientManager: SunsetGradientManager
 
-    private let options: [(id: String, name: String)] = [
+    private let systemOptions: [(id: String, name: String)] = [
         ("default",    "System Default"),
         ("rounded",    "Rounded"),
         ("serif",      "New York"),
         ("monospaced", "Monospaced"),
     ]
 
+    private let customOptions: [(id: String, name: String, fontName: String)] = [
+        ("avenirnext",  "Avenir Next",         "AvenirNext-Regular"),
+        ("georgia",     "Georgia",             "Georgia"),
+        ("baskerville", "Baskerville",         "Baskerville"),
+        ("didot",       "Didot",               "Didot"),
+        ("typewriter",  "Typewriter",          "AmericanTypewriter"),
+        ("gillsans",    "Gill Sans",           "GillSans"),
+    ]
+
     var body: some View {
         Form {
-            Section {
-                ForEach(options, id: \.id) { option in
-                    Button {
-                        selectedFontDesign = option.id
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(option.name)
-                                    .foregroundColor(.white)
-                                    .fontDesign(fontDesign(for: option.id))
-                                Text("The quick brown fox jumps")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.5))
-                                    .fontDesign(fontDesign(for: option.id))
-                            }
-                            Spacer()
-                            if selectedFontDesign == option.id {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.accentColor)
-                            }
-                        }
-                        .padding(.vertical, 2)
-                    }
-                    .buttonStyle(.plain)
+            Section(header: Text("System Fonts").foregroundColor(.white.opacity(0.55)).font(.caption)) {
+                ForEach(systemOptions, id: \.id) { option in
+                    fontRow(
+                        id: option.id,
+                        name: option.name,
+                        nameFont: Font.system(.body, design: fontDesign(for: option.id)),
+                        previewFont: Font.system(.caption, design: fontDesign(for: option.id))
+                    )
+                }
+            }
+            .listRowBackground(Color.white.opacity(0.10))
+
+            Section(header: Text("Custom Fonts").foregroundColor(.white.opacity(0.55)).font(.caption)) {
+                ForEach(customOptions, id: \.id) { option in
+                    fontRow(
+                        id: option.id,
+                        name: option.name,
+                        nameFont: .custom(option.fontName, size: 17),
+                        previewFont: .custom(option.fontName, size: 13)
+                    )
                 }
             }
             .listRowBackground(Color.white.opacity(0.10))
@@ -893,6 +907,31 @@ struct FontPickerView: View {
         .navigationTitle("Font Style")
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
+    }
+
+    @ViewBuilder
+    private func fontRow(id: String, name: String, nameFont: Font, previewFont: Font) -> some View {
+        Button {
+            selectedFontDesign = id
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(name)
+                        .foregroundColor(.white)
+                        .font(nameFont)
+                    Text("The quick brown fox jumps over the lazy dog")
+                        .foregroundColor(.white.opacity(0.5))
+                        .font(previewFont)
+                }
+                Spacer()
+                if selectedFontDesign == id {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        .buttonStyle(.plain)
     }
 
     private func fontDesign(for id: String) -> Font.Design {

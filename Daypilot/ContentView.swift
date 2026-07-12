@@ -24,6 +24,18 @@ struct ContentView: View {
         }
     }
 
+    private var customFontName: String? {
+        switch selectedFontDesign {
+        case "avenirnext":  return "AvenirNext-Regular"
+        case "georgia":     return "Georgia"
+        case "baskerville": return "Baskerville"
+        case "didot":       return "Didot"
+        case "typewriter":  return "AmericanTypewriter"
+        case "gillsans":    return "GillSans"
+        default:            return nil
+        }
+    }
+
     private var fontWeight: Font.Weight {
         switch selectedFontWeight {
         case "light":     return .light
@@ -65,6 +77,7 @@ struct ContentView: View {
         .fontDesign(fontDesign)
         .fontWeight(fontWeight)
         .dynamicTypeSize(dynamicTypeSize)
+        .applyCustomFont(customFontName)
         .tint(.white)
         .toolbarBackground(.hidden, for: .tabBar)
         .preferredColorScheme(darkModeEnabled ? .dark : .light)
@@ -189,6 +202,17 @@ private struct CustomTabBar: View {
         case "profile":  return "Profile"
         case "focus":    return "Focus"
         default:         return id.capitalized
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func applyCustomFont(_ name: String?) -> some View {
+        if let name {
+            self.environment(\.font, .custom(name, size: 17, relativeTo: .body))
+        } else {
+            self
         }
     }
 }

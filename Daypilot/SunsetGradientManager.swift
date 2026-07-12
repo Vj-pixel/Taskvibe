@@ -40,6 +40,14 @@ class SunsetGradientManager: ObservableObject {
     }
 
     static func makeGradient(date: Date, themeId: String) -> LinearGradient {
+        let mode = UserDefaults.standard.string(forKey: "themeMode") ?? "full"
+        if mode == "accent" {
+            let theme = AppThemes.find(themeId)
+            return LinearGradient(
+                colors: [Color(red: 0.07, green: 0.07, blue: 0.09), theme.color1.opacity(0.11)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+        }
         let c = Self.colors(for: date, themeId: themeId)
         return LinearGradient(colors: c, startPoint: .topLeading, endPoint: .bottomTrailing)
     }

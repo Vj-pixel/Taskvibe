@@ -192,7 +192,87 @@ struct AppThemes {
             sunsetColors:  [c(1.00,0.58,0.72), c(1.00,0.68,0.48), c(0.98,0.65,0.82)],
             nightColors:   [c(0.65,0.30,0.78), c(0.82,0.25,0.60), c(0.50,0.22,0.68)],
             urgentColor: c(1.00,0.35,0.55), kindaUrgentColor: c(1.00,0.68,0.82), notUrgentColor: c(0.68,0.95,0.82)
-        )
+        ),
+        // ── Aurora: northern lights — teal/mint canopy, violet crown ──
+        ThemeOption(
+            id: "aurora", name: "Aurora",
+            color1: c(0.10,0.88,0.80), color2: c(0.08,0.68,0.62), color3: c(0.55,0.32,0.90),
+            sunriseColors: [c(0.20,0.92,0.82), c(0.42,0.88,0.72), c(0.08,0.72,0.65)],
+            dayColors:     [c(0.05,0.90,0.78), c(0.12,0.75,0.88), c(0.28,0.95,0.70)],
+            sunsetColors:  [c(0.40,0.28,0.88), c(0.10,0.65,0.75), c(0.60,0.18,0.80)],
+            nightColors:   [c(0.05,0.18,0.38), c(0.48,0.15,0.82), c(0.08,0.55,0.62)],
+            urgentColor: c(1.00,0.30,0.50), kindaUrgentColor: c(1.00,0.80,0.20), notUrgentColor: c(0.10,0.88,0.80)
+        ),
+        // ── Sakura: cherry blossom — petal pink dawn, deep plum night ──
+        ThemeOption(
+            id: "sakura", name: "Sakura",
+            color1: c(1.00,0.72,0.82), color2: c(0.98,0.55,0.68), color3: c(1.00,0.88,0.92),
+            sunriseColors: [c(1.00,0.88,0.78), c(1.00,0.78,0.82), c(0.98,0.90,0.88)],
+            dayColors:     [c(1.00,0.75,0.84), c(0.92,0.72,0.95), c(1.00,0.82,0.90)],
+            sunsetColors:  [c(0.92,0.42,0.62), c(0.80,0.30,0.58), c(1.00,0.50,0.68)],
+            nightColors:   [c(0.45,0.12,0.32), c(0.62,0.18,0.45), c(0.35,0.08,0.25)],
+            urgentColor: c(0.85,0.12,0.35), kindaUrgentColor: c(1.00,0.65,0.25), notUrgentColor: c(0.58,0.90,0.78)
+        ),
+        // ── Ember: glowing coals — amber forge to smouldering dark ──
+        ThemeOption(
+            id: "ember", name: "Ember",
+            color1: c(1.00,0.45,0.08), color2: c(0.92,0.28,0.04), color3: c(1.00,0.68,0.10),
+            sunriseColors: [c(1.00,0.78,0.18), c(1.00,0.60,0.10), c(0.95,0.82,0.22)],
+            dayColors:     [c(1.00,0.50,0.08), c(0.92,0.38,0.05), c(1.00,0.65,0.12)],
+            sunsetColors:  [c(0.85,0.22,0.04), c(0.70,0.14,0.03), c(1.00,0.32,0.05)],
+            nightColors:   [c(0.38,0.08,0.02), c(0.58,0.14,0.03), c(0.28,0.05,0.01)],
+            urgentColor: c(0.95,0.12,0.05), kindaUrgentColor: c(1.00,0.65,0.10), notUrgentColor: c(0.20,0.75,0.45)
+        ),
+        // ── Slate: industrial steel-blue, cool and crisp all day ──
+        ThemeOption(
+            id: "slate", name: "Slate",
+            color1: c(0.42,0.55,0.75), color2: c(0.35,0.45,0.62), color3: c(0.56,0.66,0.82),
+            sunriseColors: [c(0.55,0.68,0.85), c(0.45,0.58,0.75), c(0.62,0.72,0.88)],
+            dayColors:     [c(0.42,0.55,0.75), c(0.48,0.60,0.78), c(0.38,0.50,0.70)],
+            sunsetColors:  [c(0.32,0.42,0.62), c(0.28,0.38,0.55), c(0.38,0.45,0.65)],
+            nightColors:   [c(0.15,0.20,0.35), c(0.22,0.28,0.45), c(0.10,0.15,0.28)],
+            urgentColor: c(0.92,0.28,0.22), kindaUrgentColor: c(0.95,0.72,0.18), notUrgentColor: c(0.42,0.55,0.75)
+        ),
+        // ── Dusk: twilight hour — amber warmth fading into cool mauve ──
+        ThemeOption(
+            id: "dusk", name: "Dusk",
+            color1: c(0.95,0.55,0.40), color2: c(0.80,0.35,0.55), color3: c(1.00,0.75,0.42),
+            sunriseColors: [c(1.00,0.80,0.42), c(1.00,0.65,0.35), c(0.95,0.72,0.48)],
+            dayColors:     [c(0.95,0.58,0.38), c(1.00,0.68,0.28), c(0.88,0.50,0.42)],
+            sunsetColors:  [c(0.75,0.30,0.55), c(0.88,0.22,0.48), c(0.62,0.25,0.55)],
+            nightColors:   [c(0.28,0.10,0.35), c(0.48,0.15,0.45), c(0.20,0.08,0.28)],
+            urgentColor: c(0.88,0.15,0.25), kindaUrgentColor: c(0.95,0.55,0.40), notUrgentColor: c(0.38,0.88,0.72)
+        ),
+        // ── Mono: pure grayscale, timeless and minimal ──
+        ThemeOption(
+            id: "mono", name: "Mono",
+            color1: c(0.80,0.80,0.82), color2: c(0.55,0.55,0.58), color3: c(0.68,0.68,0.70),
+            sunriseColors: [c(0.72,0.72,0.75), c(0.62,0.62,0.65), c(0.80,0.80,0.82)],
+            dayColors:     [c(0.58,0.58,0.60), c(0.50,0.50,0.52), c(0.65,0.65,0.68)],
+            sunsetColors:  [c(0.42,0.42,0.45), c(0.35,0.35,0.38), c(0.48,0.48,0.50)],
+            nightColors:   [c(0.12,0.12,0.14), c(0.22,0.22,0.24), c(0.08,0.08,0.10)],
+            urgentColor: c(0.88,0.28,0.22), kindaUrgentColor: c(0.80,0.80,0.82), notUrgentColor: c(0.55,0.55,0.58)
+        ),
+        // ── Tangerine: citrus burst — bright orange/yellow all day ──
+        ThemeOption(
+            id: "tangerine", name: "Tangerine",
+            color1: c(1.00,0.58,0.00), color2: c(1.00,0.78,0.10), color3: c(0.95,0.42,0.00),
+            sunriseColors: [c(1.00,0.88,0.20), c(1.00,0.75,0.08), c(0.98,0.82,0.18)],
+            dayColors:     [c(1.00,0.60,0.00), c(1.00,0.72,0.05), c(0.95,0.50,0.00)],
+            sunsetColors:  [c(0.90,0.35,0.00), c(0.80,0.25,0.02), c(0.95,0.40,0.00)],
+            nightColors:   [c(0.42,0.15,0.00), c(0.60,0.22,0.00), c(0.32,0.10,0.00)],
+            urgentColor: c(0.92,0.12,0.08), kindaUrgentColor: c(1.00,0.78,0.10), notUrgentColor: c(0.18,0.75,0.48)
+        ),
+        // ── Galaxy: deep space — indigo void, violet nebula, star-white ──
+        ThemeOption(
+            id: "galaxy", name: "Galaxy",
+            color1: c(0.38,0.20,0.90), color2: c(0.55,0.12,0.75), color3: c(0.88,0.88,1.00),
+            sunriseColors: [c(0.32,0.15,0.78), c(0.48,0.10,0.65), c(0.22,0.10,0.58)],
+            dayColors:     [c(0.40,0.22,0.92), c(0.28,0.12,0.78), c(0.52,0.18,0.85)],
+            sunsetColors:  [c(0.58,0.08,0.72), c(0.75,0.05,0.58), c(0.42,0.08,0.65)],
+            nightColors:   [c(0.08,0.04,0.28), c(0.32,0.08,0.62), c(0.05,0.03,0.18)],
+            urgentColor: c(1.00,0.25,0.45), kindaUrgentColor: c(0.55,0.12,0.75), notUrgentColor: c(0.38,0.20,0.90)
+        ),
     ]
 
     static func find(_ id: String) -> ThemeOption {
@@ -210,23 +290,30 @@ private func c(_ r: Double, _ g: Double, _ b: Double) -> Color {
 struct ThemeCard: View {
     let theme: ThemeOption
     let isSelected: Bool
+    var accentOnly: Bool = false
 
     var body: some View {
         VStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .fill(theme.color3)
-                    .frame(width: 30, height: 30)
-                    .offset(x: 19)
-                Circle()
-                    .fill(theme.color2)
-                    .frame(width: 30, height: 30)
+            if accentOnly {
                 Circle()
                     .fill(theme.color1)
-                    .frame(width: 30, height: 30)
-                    .offset(x: -19)
+                    .frame(width: 42, height: 42)
+            } else {
+                ZStack {
+                    Circle()
+                        .fill(theme.color3)
+                        .frame(width: 30, height: 30)
+                        .offset(x: 19)
+                    Circle()
+                        .fill(theme.color2)
+                        .frame(width: 30, height: 30)
+                    Circle()
+                        .fill(theme.color1)
+                        .frame(width: 30, height: 30)
+                        .offset(x: -19)
+                }
+                .frame(width: 72, height: 30)
             }
-            .frame(width: 72, height: 30)
 
             Text(theme.name)
                 .font(.caption.weight(.semibold))
@@ -254,6 +341,7 @@ struct ThemeCard: View {
 
 struct ThemePickerView: View {
     @AppStorage("selectedTheme") private var selectedTheme = "original"
+    @AppStorage("themeMode")     private var themeMode     = "full"
     @EnvironmentObject private var gradientManager: SunsetGradientManager
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
@@ -262,17 +350,35 @@ struct ThemePickerView: View {
         ZStack {
             Color(red: 0.11, green: 0.11, blue: 0.12).ignoresSafeArea()
 
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(AppThemes.all) { theme in
-                        ThemeCard(theme: theme, isSelected: selectedTheme == theme.id)
+            VStack(spacing: 0) {
+                Picker("", selection: $themeMode) {
+                    Text("Full Background").tag("full")
+                    Text("Accent Only").tag("accent")
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .onChange(of: themeMode) { _, _ in
+                    gradientManager.updateGradient()
+                }
+
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 12) {
+                        ForEach(AppThemes.all) { theme in
+                            ThemeCard(
+                                theme: theme,
+                                isSelected: selectedTheme == theme.id,
+                                accentOnly: themeMode == "accent"
+                            )
                             .onTapGesture {
                                 selectedTheme = theme.id
                                 gradientManager.updateGradient()
                             }
+                        }
                     }
+                    .padding(16)
                 }
-                .padding(16)
             }
         }
         .navigationTitle("Themes")
