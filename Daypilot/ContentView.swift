@@ -55,28 +55,19 @@ struct ContentView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                ForEach(orderedTabIds, id: \.self) { id in
-                    tabContent(for: id)
-                        .tag(id)
-                        .toolbar(.hidden, for: .tabBar)
-                        .ignoresSafeArea(edges: .bottom)
-                }
+        TabView(selection: $selectedTab) {
+            ForEach(orderedTabIds, id: \.self) { id in
+                tabContent(for: id)
+                    .tabItem { Label(tabLabel(for: id), systemImage: tabIcon(for: id)) }
+                    .tag(id)
             }
-            .fontDesign(fontDesign)
-            .fontWeight(fontWeight)
-            .dynamicTypeSize(dynamicTypeSize)
-            .tint(.white)
-            .preferredColorScheme(darkModeEnabled ? .dark : .light)
-
-            CustomTabBar(
-                tabs: orderedTabIds,
-                selected: $selectedTab,
-                theme: AppThemes.find(selectedTheme),
-                namespace: tabPill
-            )
         }
+        .fontDesign(fontDesign)
+        .fontWeight(fontWeight)
+        .dynamicTypeSize(dynamicTypeSize)
+        .tint(.white)
+        .toolbarBackground(.hidden, for: .tabBar)
+        .preferredColorScheme(darkModeEnabled ? .dark : .light)
         .overlay {
             if isLocked && appLockEnabled {
                 LockScreenOverlay(theme: AppThemes.find(selectedTheme), onUnlock: authenticate)

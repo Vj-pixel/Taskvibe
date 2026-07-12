@@ -437,14 +437,6 @@ struct TaskContentView: View {
                                 lineWidth: 1
                             )
                     )
-                // Left urgency accent strip
-                HStack(spacing: 0) {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(ringColor.opacity(isFutureHabit ? 0.3 : 0.85))
-                        .frame(width: 4)
-                    Spacer()
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 16))
                 if isFutureHabit {
                     FutureHabitStripes()
                 }
