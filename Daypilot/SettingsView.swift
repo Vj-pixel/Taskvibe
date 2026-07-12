@@ -205,7 +205,7 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background {
-                gradientManager.gradient
+                ZStack { gradientManager.gradient; ThemeParticleView() }
                     .ignoresSafeArea()
             }
             .toolbarBackground(.hidden, for: .navigationBar)
@@ -302,7 +302,7 @@ struct TabOrderView: View {
             .listRowBackground(Color.white.opacity(0.10))
         }
         .scrollContentBackground(.hidden)
-        .background { gradientManager.gradient.ignoresSafeArea() }
+        .background { ZStack { gradientManager.gradient; ThemeParticleView() }.ignoresSafeArea() }
         .navigationTitle("Tab Order")
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -421,7 +421,7 @@ struct ChangeEmailView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background { gradientManager.gradient.ignoresSafeArea() }
+        .background { ZStack { gradientManager.gradient; ThemeParticleView() }.ignoresSafeArea() }
         .navigationTitle("Change Email")
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -518,7 +518,7 @@ struct ChangePasswordView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background { gradientManager.gradient.ignoresSafeArea() }
+        .background { ZStack { gradientManager.gradient; ThemeParticleView() }.ignoresSafeArea() }
         .navigationTitle("Change Password")
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -576,7 +576,7 @@ struct FeedbackFormView: View {
 
     var body: some View {
         ZStack {
-            gradientManager.gradient.ignoresSafeArea()
+            ZStack { gradientManager.gradient; ThemeParticleView() }.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Icon header
@@ -794,7 +794,7 @@ struct ProgressStylePickerView: View {
             .listRowBackground(Color.white.opacity(0.10))
         }
         .scrollContentBackground(.hidden)
-        .background { gradientManager.gradient.ignoresSafeArea() }
+        .background { ZStack { gradientManager.gradient; ThemeParticleView() }.ignoresSafeArea() }
         .navigationTitle("Progress Style")
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -847,7 +847,7 @@ struct TextSizePickerView: View {
             .listRowBackground(Color.white.opacity(0.10))
         }
         .scrollContentBackground(.hidden)
-        .background { gradientManager.gradient.ignoresSafeArea() }
+        .background { ZStack { gradientManager.gradient; ThemeParticleView() }.ignoresSafeArea() }
         .navigationTitle("Text Size")
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -903,7 +903,7 @@ struct FontPickerView: View {
             .listRowBackground(Color.white.opacity(0.10))
         }
         .scrollContentBackground(.hidden)
-        .background { gradientManager.gradient.ignoresSafeArea() }
+        .background { ZStack { gradientManager.gradient; ThemeParticleView() }.ignoresSafeArea() }
         .navigationTitle("Font Style")
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)

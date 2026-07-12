@@ -22,9 +22,11 @@ struct CalendarTaskView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Rectangle()
-                    .fill(gradientManager.gradient)
-                    .ignoresSafeArea()
+                ZStack {
+                    Rectangle().fill(gradientManager.gradient)
+                    ThemeParticleView()
+                }
+                .ignoresSafeArea()
                 
                 VStack(spacing: 12) {
                     monthHeader

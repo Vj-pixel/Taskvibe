@@ -10,6 +10,7 @@ struct ContentView: View {
     @AppStorage("pomodoroPlacement")  private var pomodoroPlacement  = "corner"
     @AppStorage("appLockEnabled")     private var appLockEnabled     = false
     @AppStorage("selectedTheme")      private var selectedTheme      = "original"
+    @AppStorage("themeMode")          private var themeMode          = "full"
     @State private var selectedTab    = "tasks"
     @State private var isLocked       = false
     @Environment(\.scenePhase) private var scenePhase
@@ -42,6 +43,10 @@ struct ContentView: View {
         case "semibold":  return .semibold
         default:          return .regular
         }
+    }
+
+    private var tintColor: Color {
+        themeMode == "accent" ? AppThemes.find(selectedTheme).accentColor : .white
     }
 
     private var dynamicTypeSize: DynamicTypeSize {
@@ -78,7 +83,7 @@ struct ContentView: View {
         .fontWeight(fontWeight)
         .dynamicTypeSize(dynamicTypeSize)
         .applyCustomFont(customFontName)
-        .tint(.white)
+        .tint(tintColor)
         .toolbarBackground(.hidden, for: .tabBar)
         .preferredColorScheme(darkModeEnabled ? .dark : .light)
         .overlay {
@@ -91,6 +96,20 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .background, appLockEnabled { isLocked = true }
             else if phase == .active, appLockEnabled, isLocked { authenticate() }
+        }
+        .onAppear { applyNavBarFont() }
+        .onChange(of: selectedFontDesign) { _, _ in applyNavBarFont() }
+    }
+
+    private func applyNavBarFont() {
+        if let name = customFontName,
+           let titleFont  = UIFont(name: name, size: 17),
+           let largeFont  = UIFont(name: name, size: 34) {
+            UINavigationBar.appearance().titleTextAttributes      = [.font: titleFont]
+            UINavigationBar.appearance().largeTitleTextAttributes = [.font: largeFont]
+        } else {
+            UINavigationBar.appearance().titleTextAttributes      = nil
+            UINavigationBar.appearance().largeTitleTextAttributes = nil
         }
     }
 

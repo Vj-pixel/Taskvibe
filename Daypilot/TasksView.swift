@@ -1732,7 +1732,10 @@ struct TasksView: View {
     }
 
     private var backgroundGradient: some View {
-        Rectangle().fill(gradientManager.gradient)
+        ZStack {
+            Rectangle().fill(gradientManager.gradient)
+            ThemeParticleView()
+        }
     }
 
     private var tasksByDay: [Date: [Daypilot]] {
