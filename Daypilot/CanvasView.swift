@@ -277,7 +277,8 @@ struct CanvasView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                ZStack { Rectangle().fill(gradientManager.gradient); ThemeParticleView() }.ignoresSafeArea()
+                Rectangle().fill(gradientManager.gradient).ignoresSafeArea()
+                ThemeParticleView().ignoresSafeArea().allowsHitTesting(false)
 
                 Group {
                     if !isConnected || showSetup {

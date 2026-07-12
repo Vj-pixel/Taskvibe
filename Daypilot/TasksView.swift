@@ -1701,6 +1701,9 @@ struct TasksView: View {
         NavigationStack {
             ZStack {
                 backgroundGradient.ignoresSafeArea()
+                ThemeParticleView()
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
                 mainContent
             }
         }
@@ -1732,10 +1735,7 @@ struct TasksView: View {
     }
 
     private var backgroundGradient: some View {
-        ZStack {
-            Rectangle().fill(gradientManager.gradient)
-            ThemeParticleView()
-        }
+        Rectangle().fill(gradientManager.gradient)
     }
 
     private var tasksByDay: [Date: [Daypilot]] {
