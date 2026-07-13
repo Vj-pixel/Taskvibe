@@ -659,8 +659,8 @@ private struct LiveSkyView: View {
                 let t     = now.timeIntervalSinceReferenceDate
                 let cal   = Calendar.current
                 let hour  = cal.component(.hour,   from: now)
-                let min   = cal.component(.minute, from: now)
-                let tod   = Double(hour) + Double(min) / 60.0   // time-of-day as float hours
+                let mins  = cal.component(.minute, from: now)
+                let tod   = Double(hour) + Double(mins) / 60.0   // time-of-day as float hours
 
                 // ── Sun ──────────────────────────────────────────────────────────────
                 // Day arc: 6am (left horizon) → noon (zenith) → 8pm (right horizon)
