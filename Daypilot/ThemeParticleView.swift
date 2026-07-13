@@ -581,55 +581,85 @@ private struct FallingParticles: View {
 // MARK: - Ember Smoke
 
 private struct SmokeView: View {
-    struct Puff {
-        let baseX: Double
-        let speed: Double
-        let driftHz: Double
-        let driftAmp: Double
-        let phase: Double
-        let startR: CGFloat
-        let endR: CGFloat
-    }
-    private let puffs: [Puff]
+
+    // Blobs that churn/bubble anchored at the bottom edge
+    struct BottomBlob { let x: Double; let r: CGFloat; let phase, hz: Double }
+    // Distinct 3-lobe smoke puffs that rise
+    struct RisePuff   { let baseX, speed, sway, swayHz, phase: Double; let r: CGFloat }
+
+    private let blobs: [BottomBlob]
+    private let puffs: [RisePuff]
 
     init() {
         var rng = LCG(state: 1313)
-        puffs = (0..<14).map { _ in
-            Puff(baseX:    rng.lerp(0.04, 0.96),
-                 speed:    rng.lerp(0.008, 0.020),
-                 driftHz:  rng.lerp(0.06, 0.20),
-                 driftAmp: rng.lerp(8, 28),
-                 phase:    rng.lerp(0, .pi * 2),
-                 startR:   CGFloat(rng.lerp(16, 32)),
-                 endR:     CGFloat(rng.lerp(55, 95)))
+        blobs = (0..<22).map { _ in
+            BottomBlob(x:     rng.lerp(0.0, 1.0),
+                       r:     CGFloat(rng.lerp(24, 56)),
+                       phase: rng.lerp(0, .pi * 2),
+                       hz:    rng.lerp(0.12, 0.40))
+        }
+        puffs = (0..<11).map { _ in
+            RisePuff(baseX:  rng.lerp(0.05, 0.95),
+                     speed:  rng.lerp(0.010, 0.024),
+                     sway:   rng.lerp(6, 20),
+                     swayHz: rng.lerp(0.08, 0.22),
+                     phase:  rng.lerp(0, .pi * 2),
+                     r:      CGFloat(rng.lerp(13, 26)))
         }
     }
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 20)) { tl in
             Canvas { ctx, size in
-                let t         = tl.date.timeIntervalSinceReferenceDate
-                let smokeZone = size.height * 0.55   // smoke lives in lower 55%
+                let t = tl.date.timeIntervalSinceReferenceDate
 
-                for pf in puffs {
-                    let prog  = fmod(pf.phase / (.pi * 2) + t * pf.speed, 1.0)
-                    let rawY  = 1.0 - prog   // 1 at bottom, 0 at top
-                    let y     = size.height * CGFloat(rawY)
-                    guard y > size.height - smokeZone else { continue }
-
-                    let x     = CGFloat(pf.baseX) * size.width
-                             + CGFloat(sin(t * pf.driftHz + pf.phase) * pf.driftAmp)
-                    let r     = pf.startR + (pf.endR - pf.startR) * CGFloat(1.0 - rawY)
-
-                    // Fade in quickly, then fade out gradually toward top of smoke zone
-                    let fromBottom = Double((size.height - y) / smokeZone)  // 0=bottom, 1=top
-                    let fadeIn     = min(1.0, fromBottom * 7)
-                    let alpha      = CGFloat(fadeIn * (1.0 - fromBottom * 0.85)) * 0.30
-
-                    ctx.opacity = alpha
+                // ── Bottom churning smoke — blobs centered just below the screen ──
+                for b in blobs {
+                    let x     = CGFloat(b.x) * size.width
+                    let pulse = sin(t * b.hz + b.phase)
+                    let r     = b.r * CGFloat(1.0 + pulse * 0.10)
+                    // Push center below bottom edge so only the top dome peeks up
+                    let y     = size.height + r * 0.35 + CGFloat(pulse * 5.0)
+                    ctx.opacity = 0.20 + pulse * 0.06
                     ctx.fill(
-                        Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)),
-                        with: .color(Color(red: 0.18, green: 0.14, blue: 0.11)))
+                        Path(ellipseIn: CGRect(x: x - r, y: y - r,
+                                               width: r * 2, height: r * 1.35)),
+                        with: .color(Color(red: 0.10, green: 0.08, blue: 0.06)))
+                }
+
+                // ── Rising 3-lobe smoke puffs ────────────────────────────────────
+                for pf in puffs {
+                    let prog = fmod(pf.phase / (.pi * 2) + t * pf.speed, 1.0)
+                    let y    = size.height * CGFloat(1.0 - prog)
+                    guard y > size.height * 0.30 else { continue }
+
+                    let x    = CGFloat(pf.baseX) * size.width
+                             + CGFloat(sin(t * pf.swayHz + pf.phase) * pf.sway)
+                    // Puff expands as it rises
+                    let s    = pf.r * CGFloat(0.55 + prog * 1.55)
+                    let fromBottom = Double((size.height - y) / (size.height * 0.70))
+                    let alpha = min(1.0, fromBottom * 6.0) * (1.0 - fromBottom * 0.86) * 0.44
+
+                    ctx.drawLayer { c in
+                        c.translateBy(x: x, y: y)
+                        // Main body — wide, slightly squashed ellipse
+                        c.opacity = alpha
+                        c.fill(
+                            Path(ellipseIn: CGRect(x: -s * 0.58, y: -s * 0.40,
+                                                   width: s * 1.16, height: s * 0.80)),
+                            with: .color(Color(red: 0.24, green: 0.19, blue: 0.14)))
+                        // Upper-left shoulder lobe
+                        c.opacity = alpha * 0.88
+                        c.fill(
+                            Path(ellipseIn: CGRect(x: -s * 0.90, y: -s * 0.74,
+                                                   width: s * 0.64, height: s * 0.58)),
+                            with: .color(Color(red: 0.20, green: 0.16, blue: 0.12)))
+                        // Upper-right shoulder lobe
+                        c.fill(
+                            Path(ellipseIn: CGRect(x:  s * 0.26, y: -s * 0.70,
+                                                   width: s * 0.62, height: s * 0.56)),
+                            with: .color(Color(red: 0.20, green: 0.16, blue: 0.12)))
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
