@@ -233,15 +233,15 @@ struct AppThemes {
             nightColors:   [c(0.15,0.20,0.35), c(0.22,0.28,0.45), c(0.10,0.15,0.28)],
             urgentColor: c(0.92,0.28,0.22), kindaUrgentColor: c(0.95,0.72,0.18), notUrgentColor: c(0.42,0.55,0.75)
         ),
-        // ── Dusk: twilight hour — amber warmth fading into cool mauve ──
+        // ── Live: real-time sky — golden dawn, azure day, violet dusk, deep night ──
         ThemeOption(
-            id: "dusk", name: "Dusk",
-            color1: c(0.95,0.55,0.40), color2: c(0.80,0.35,0.55), color3: c(1.00,0.75,0.42),
-            sunriseColors: [c(1.00,0.80,0.42), c(1.00,0.65,0.35), c(0.95,0.72,0.48)],
-            dayColors:     [c(0.95,0.58,0.38), c(1.00,0.68,0.28), c(0.88,0.50,0.42)],
-            sunsetColors:  [c(0.75,0.30,0.55), c(0.88,0.22,0.48), c(0.62,0.25,0.55)],
-            nightColors:   [c(0.28,0.10,0.35), c(0.48,0.15,0.45), c(0.20,0.08,0.28)],
-            urgentColor: c(0.88,0.15,0.25), kindaUrgentColor: c(0.95,0.55,0.40), notUrgentColor: c(0.38,0.88,0.72)
+            id: "live", name: "Live",
+            color1: c(0.30,0.62,0.92), color2: c(1.00,0.72,0.25), color3: c(0.12,0.08,0.28),
+            sunriseColors: [c(1.00,0.62,0.28), c(0.95,0.42,0.22), c(0.85,0.48,0.42)],
+            dayColors:     [c(0.28,0.58,0.90), c(0.42,0.70,0.95), c(0.18,0.48,0.85)],
+            sunsetColors:  [c(0.92,0.45,0.18), c(0.72,0.22,0.40), c(0.48,0.18,0.55)],
+            nightColors:   [c(0.04,0.04,0.18), c(0.07,0.07,0.28), c(0.02,0.02,0.12)],
+            urgentColor: c(0.90,0.20,0.20), kindaUrgentColor: c(1.00,0.72,0.25), notUrgentColor: c(0.28,0.58,0.90)
         ),
         // ── Mono: pure grayscale, timeless and minimal ──
         ThemeOption(

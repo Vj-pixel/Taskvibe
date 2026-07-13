@@ -7,20 +7,37 @@ struct ThemeParticleView: View {
 
     var body: some View {
         switch selectedTheme {
-        case "galaxy":    GalaxyView()
-        case "midnight":  TwinklingStars()
-        case "aurora":    AuroraWaves()
-        case "sakura":    FallingParticles(cfg: .petals)
-        case "ember":     FallingParticles(cfg: .sparks)
-        case "forest":    FallingParticles(cfg: .leaves)
-        case "ocean":     FallingParticles(cfg: .bubbles)
-        case "cyberpunk": CyberpunkGrid()
-        case "retrowave": RetrowaveScanlines()
-        case "cute":      FallingParticles(cfg: .hearts)
-        case "tangerine": FallingParticles(cfg: .sparkles)
-        case "dusk":      FallingParticles(cfg: .motes)
-        case "slate":     FallingParticles(cfg: .dust)
-        default:          EmptyView()
+        case "galaxy":
+            GalaxyView()
+        case "midnight":
+            TwinklingStars()
+        case "aurora":
+            AuroraWaves()
+        case "sakura":
+            FallingParticles(cfg: .petals)
+        case "ember":
+            ZStack {
+                SmokeView()
+                FallingParticles(cfg: .sparks)
+            }
+        case "forest":
+            FallingParticles(cfg: .leaves)
+        case "ocean":
+            FallingParticles(cfg: .bubbles)
+        case "cyberpunk":
+            CyberpunkGrid()
+        case "retrowave":
+            RetrowaveScanlines()
+        case "cute":
+            FallingParticles(cfg: .hearts)
+        case "tangerine":
+            FallingParticles(cfg: .sparkles)
+        case "slate":
+            FallingParticles(cfg: .dust)
+        case "live":
+            LiveSkyView()
+        default:
+            EmptyView()
         }
     }
 }
@@ -55,8 +72,8 @@ private struct LCG {
 private struct GalaxyView: View {
 
     struct ArmStar {
-        let baseAngle: Double   // angle relative to rotation origin
-        let r: Double           // 0..1 normalized radius
+        let baseAngle: Double
+        let r: Double
         let dotAlpha: Double
         let dotR: CGFloat
         let dustAlpha: Double
@@ -110,25 +127,22 @@ private struct GalaxyView: View {
         TimelineView(.animation(minimumInterval: 1.0 / 20)) { tl in
             Canvas { ctx, size in
                 let t   = tl.date.timeIntervalSinceReferenceDate
-                let rot = t * 0.016          // one full turn ≈ 393 s
+                let rot = t * 0.016
                 let cx  = size.width  * 0.50
-                let cy  = size.height * 0.47
+                let cy  = size.height * 0.62   // shifted down
                 let sc  = min(size.width, size.height) * 0.38
-                let ax: CGFloat = 1.00       // horizontal scale
-                let ay: CGFloat = 0.40       // vertical compression — oblique view
+                let ax: CGFloat = 1.00
+                let ay: CGFloat = 0.40
 
-                // Background stars
                 for s in bgStars {
                     ctx.opacity = s.alpha
                     let px = CGFloat(s.x) * size.width
                     let py = CGFloat(s.y) * size.height
-                    ctx.fill(
-                        Path(ellipseIn: CGRect(x: px - s.r, y: py - s.r,
-                                               width: s.r * 2, height: s.r * 2)),
-                        with: .color(.white))
+                    ctx.fill(Path(ellipseIn: CGRect(x: px - s.r, y: py - s.r,
+                                                    width: s.r * 2, height: s.r * 2)),
+                             with: .color(.white))
                 }
 
-                // Faint outer galactic disk
                 let dk = sc * 1.12
                 ctx.opacity = 0.07
                 ctx.fill(
@@ -136,7 +150,6 @@ private struct GalaxyView: View {
                                            width: dk * 2 * ax, height: dk * 2 * ay)),
                     with: .color(Color(red: 0.50, green: 0.35, blue: 0.90)))
 
-                // Arm nebula dust (behind stars)
                 for s in armStars where s.dustAlpha > 0 {
                     let ang = s.baseAngle + rot
                     let rx  = CGFloat(s.r) * sc
@@ -144,13 +157,11 @@ private struct GalaxyView: View {
                     let py  = cy + rx * CGFloat(sin(ang)) * ay
                     let dr  = s.dustR
                     ctx.opacity = s.dustAlpha
-                    ctx.fill(
-                        Path(ellipseIn: CGRect(x: px - dr, y: py - dr,
-                                               width: dr * 2, height: dr * 2)),
-                        with: .color(s.dustColor))
+                    ctx.fill(Path(ellipseIn: CGRect(x: px - dr, y: py - dr,
+                                                    width: dr * 2, height: dr * 2)),
+                             with: .color(s.dustColor))
                 }
 
-                // Core glow (outermost → innermost)
                 let coreLayers: [(CGFloat, Double, Color)] = [
                     (sc * 0.38, 0.07, Color(red: 0.50, green: 0.32, blue: 0.92)),
                     (sc * 0.22, 0.14, Color(red: 0.68, green: 0.50, blue: 1.00)),
@@ -165,7 +176,6 @@ private struct GalaxyView: View {
                         with: .color(col))
                 }
 
-                // Arm star dots (on top of dust)
                 for s in armStars {
                     let ang = s.baseAngle + rot
                     let rx  = CGFloat(s.r) * sc
@@ -331,7 +341,6 @@ private func sparkPath(_ s: CGFloat) -> Path {
 }
 
 private func sparklePath(_ s: CGFloat) -> Path {
-    // 4-pointed star
     Path { p in
         let r1 = s * 0.50, r2 = s * 0.14
         for i in 0..<8 {
@@ -348,7 +357,7 @@ private func sparklePath(_ s: CGFloat) -> Path {
 
 private enum PConfig {
     case petals, sparks, leaves, bubbles, hearts
-    case sparkles, motes, dust
+    case sparkles, dust
 
     var count: Int {
         switch self {
@@ -358,7 +367,6 @@ private enum PConfig {
         case .bubbles:  return 18
         case .hearts:   return 16
         case .sparkles: return 22
-        case .motes:    return 20
         case .dust:     return 28
         }
     }
@@ -370,7 +378,6 @@ private enum PConfig {
         case .bubbles:  return Color(red: 0.48, green: 0.88, blue: 0.96)
         case .hearts:   return Color(red: 1.00, green: 0.62, blue: 0.78)
         case .sparkles: return Color(red: 1.00, green: 0.72, blue: 0.12)
-        case .motes:    return Color(red: 1.00, green: 0.62, blue: 0.38)
         case .dust:     return Color(red: 0.72, green: 0.82, blue: 0.95)
         }
     }
@@ -382,29 +389,22 @@ private enum PConfig {
         case .bubbles:  return (14, 32)
         case .hearts:   return (9,  20)
         case .sparkles: return (4,  10)
-        case .motes:    return (3,   8)
         case .dust:     return (2,   6)
         }
     }
     var risesUp: Bool {
         switch self {
-        case .sparks, .bubbles, .motes, .dust: return true
+        case .sparks, .bubbles, .dust: return true
         default: return false
         }
     }
     var rotates: Bool {
         switch self {
-        case .bubbles, .motes, .dust: return false
+        case .bubbles, .dust: return false
         default: return true
         }
     }
-    var baseAlpha: Double {
-        switch self {
-        case .dust:  return 0.45
-        case .motes: return 0.55
-        default:     return 0.72
-        }
-    }
+    var baseAlpha: Double { 0.72 }
     var seed: UInt64 {
         switch self {
         case .petals:   return 101
@@ -413,7 +413,6 @@ private enum PConfig {
         case .bubbles:  return 404
         case .hearts:   return 505
         case .sparkles: return 606
-        case .motes:    return 707
         case .dust:     return 808
         }
     }
@@ -452,11 +451,11 @@ private struct FallingParticles: View {
                 let t   = tl.date.timeIntervalSinceReferenceDate
                 let col = cfg.color
 
-                // Hearts: pick contrasting color based on hour so they're always visible
+                // Hearts: contrasting color based on hour for visibility
                 let hour = Calendar.current.component(.hour, from: tl.date)
                 let heartFill: Color = (hour >= 6 && hour < 19)
-                    ? Color(red: 0.85, green: 0.10, blue: 0.52)   // deep raspberry for light day bg
-                    : Color(red: 1.00, green: 0.80, blue: 0.92)   // pale pink for dark night bg
+                    ? Color(red: 0.85, green: 0.10, blue: 0.52)
+                    : Color(red: 1.00, green: 0.80, blue: 0.92)
 
                 for p in parts {
                     let prog  = fmod((p.phase / (.pi * 2)) + t * p.speed, 1.0)
@@ -489,8 +488,7 @@ private struct FallingParticles: View {
                             var vein = Path()
                             vein.move(to: CGPoint(x: 0, y: -p.size * 0.58))
                             vein.addLine(to: CGPoint(x: 0,  y:  p.size * 0.58))
-                            c.stroke(vein,
-                                     with: .color(Color(red: 0.15, green: 0.55, blue: 0.10)),
+                            c.stroke(vein, with: .color(Color(red: 0.15, green: 0.55, blue: 0.10)),
                                      lineWidth: 0.8)
                         }
 
@@ -553,7 +551,7 @@ private struct FallingParticles: View {
                             c.fill(sparklePath(p.size * 0.48), with: .color(.white))
                         }
 
-                    case .motes, .dust:
+                    case .dust:
                         ctx.drawLayer { c in
                             c.translateBy(x: x, y: y)
                             let r  = p.size / 2
@@ -573,6 +571,195 @@ private struct FallingParticles: View {
                                 with: .color(.white))
                         }
                     }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+// MARK: - Ember Smoke
+
+private struct SmokeView: View {
+    struct Puff {
+        let baseX: Double
+        let speed: Double
+        let driftHz: Double
+        let driftAmp: Double
+        let phase: Double
+        let startR: CGFloat
+        let endR: CGFloat
+    }
+    private let puffs: [Puff]
+
+    init() {
+        var rng = LCG(state: 1313)
+        puffs = (0..<14).map { _ in
+            Puff(baseX:    rng.lerp(0.04, 0.96),
+                 speed:    rng.lerp(0.008, 0.020),
+                 driftHz:  rng.lerp(0.06, 0.20),
+                 driftAmp: rng.lerp(8, 28),
+                 phase:    rng.lerp(0, .pi * 2),
+                 startR:   CGFloat(rng.lerp(16, 32)),
+                 endR:     CGFloat(rng.lerp(55, 95)))
+        }
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 20)) { tl in
+            Canvas { ctx, size in
+                let t         = tl.date.timeIntervalSinceReferenceDate
+                let smokeZone = size.height * 0.55   // smoke lives in lower 55%
+
+                for pf in puffs {
+                    let prog  = fmod(pf.phase / (.pi * 2) + t * pf.speed, 1.0)
+                    let rawY  = 1.0 - prog   // 1 at bottom, 0 at top
+                    let y     = size.height * CGFloat(rawY)
+                    guard y > size.height - smokeZone else { continue }
+
+                    let x     = CGFloat(pf.baseX) * size.width
+                             + CGFloat(sin(t * pf.driftHz + pf.phase) * pf.driftAmp)
+                    let r     = pf.startR + (pf.endR - pf.startR) * CGFloat(1.0 - rawY)
+
+                    // Fade in quickly, then fade out gradually toward top of smoke zone
+                    let fromBottom = Double((size.height - y) / smokeZone)  // 0=bottom, 1=top
+                    let fadeIn     = min(1.0, fromBottom * 7)
+                    let alpha      = CGFloat(fadeIn * (1.0 - fromBottom * 0.85)) * 0.30
+
+                    ctx.opacity = alpha
+                    ctx.fill(
+                        Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)),
+                        with: .color(Color(red: 0.18, green: 0.14, blue: 0.11)))
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+// MARK: - Live Sky (sun arc + moon + stars, time-of-day driven)
+
+private struct LiveSkyView: View {
+
+    struct NightStar { let x, y, alpha: Double; let r: CGFloat }
+
+    private static let nightStars: [NightStar] = {
+        var rng = LCG(state: 5050)
+        return (0..<65).map { _ in
+            NightStar(x: rng.next(), y: rng.lerp(0.02, 0.78),
+                      alpha: rng.lerp(0.18, 0.55),
+                      r: CGFloat(rng.lerp(0.4, 1.5)))
+        }
+    }()
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 20)) { tl in
+            Canvas { ctx, size in
+                let now   = tl.date
+                let t     = now.timeIntervalSinceReferenceDate
+                let cal   = Calendar.current
+                let hour  = cal.component(.hour,   from: now)
+                let min   = cal.component(.minute, from: now)
+                let tod   = Double(hour) + Double(min) / 60.0   // time-of-day as float hours
+
+                // ── Sun ──────────────────────────────────────────────────────────────
+                // Day arc: 6am (left horizon) → noon (zenith) → 8pm (right horizon)
+                let sunT   = (tod - 6.0) / 14.0                        // 0 at 6am, 1 at 8pm
+                let clampT = min(max(sunT, 0), 1)
+                let sunNX  = 0.08 + clampT * 0.84
+                let sunNY  = 0.88 - 4.0 * clampT * (1.0 - clampT) * 0.70   // parabolic arc
+                let sunX   = CGFloat(sunNX) * size.width
+                let sunY   = CGFloat(sunNY) * size.height
+
+                var sunAlpha: Double = 1.0
+                if tod <= 5.5 || tod >= 20.5 { sunAlpha = 0 }
+                else if tod < 6.5            { sunAlpha = tod - 5.5 }
+                else if tod > 19.5           { sunAlpha = 20.5 - tod }
+
+                if sunAlpha > 0 {
+                    let distFromNoon = abs(clampT - 0.5) * 2
+                    let sunCol = Color(red: 1.0,
+                                       green: 0.96 - distFromNoon * 0.44,
+                                       blue:  0.75 - distFromNoon * 0.58)
+                    let sunR = CGFloat(28 + distFromNoon * 14)
+
+                    // Glow halos
+                    let glowRadii: [(CGFloat, Double)] = [
+                        (sunR * 5.0, 0.05), (sunR * 3.0, 0.10), (sunR * 1.8, 0.20)
+                    ]
+                    for (gr, ga) in glowRadii {
+                        ctx.opacity = sunAlpha * ga
+                        ctx.fill(
+                            Path(ellipseIn: CGRect(x: sunX - gr, y: sunY - gr,
+                                                   width: gr * 2, height: gr * 2)),
+                            with: .color(sunCol))
+                    }
+
+                    // Rotating rays (12 alternating long/short)
+                    let rayRot = t * 0.04
+                    for i in 0..<12 {
+                        let angle = Double(i) * .pi / 6.0 + rayRot
+                        let r1 = Double(sunR) * 1.40
+                        let r2 = r1 + Double(sunR) * (i % 2 == 0 ? 0.90 : 0.50)
+                        var ray = Path()
+                        ray.move(to: CGPoint(x: sunX + CGFloat(r1 * cos(angle)),
+                                             y: sunY + CGFloat(r1 * sin(angle))))
+                        ray.addLine(to: CGPoint(x: sunX + CGFloat(r2 * cos(angle)),
+                                                y: sunY + CGFloat(r2 * sin(angle))))
+                        ctx.opacity = sunAlpha * 0.48
+                        ctx.stroke(ray, with: .color(sunCol), lineWidth: 2.0)
+                    }
+
+                    // Sun body
+                    ctx.opacity = sunAlpha * 0.92
+                    ctx.fill(
+                        Path(ellipseIn: CGRect(x: sunX - sunR, y: sunY - sunR,
+                                               width: sunR * 2, height: sunR * 2)),
+                        with: .color(sunCol))
+                    let coreR = sunR * 0.58
+                    ctx.opacity = sunAlpha
+                    ctx.fill(
+                        Path(ellipseIn: CGRect(x: sunX - coreR, y: sunY - coreR,
+                                               width: coreR * 2, height: coreR * 2)),
+                        with: .color(Color(red: 1.0, green: 0.98, blue: 0.90)))
+                }
+
+                // ── Moon + night stars ────────────────────────────────────────────
+                var moonAlpha: Double = 1.0
+                if tod >= 6.0 && tod <= 19.5      { moonAlpha = 0 }
+                else if tod > 19.5 && tod <= 20.5 { moonAlpha = tod - 19.5 }
+                else if tod >= 5.0 && tod < 6.0   { moonAlpha = 6.0 - tod }
+
+                if moonAlpha > 0 {
+                    for s in Self.nightStars {
+                        ctx.opacity = s.alpha * moonAlpha * 0.85
+                        let px = CGFloat(s.x) * size.width
+                        let py = CGFloat(s.y) * size.height
+                        ctx.fill(
+                            Path(ellipseIn: CGRect(x: px - s.r, y: py - s.r,
+                                                   width: s.r * 2, height: s.r * 2)),
+                            with: .color(.white))
+                    }
+
+                    let moonX = size.width  * 0.72
+                    let moonY = size.height * 0.18
+                    let moonR: CGFloat = 25
+
+                    let moonGlowLayers: [(CGFloat, Double)] = [
+                        (moonR * 3.5, 0.10), (moonR * 1.8, 0.25)
+                    ]
+                    for (gr, ga) in moonGlowLayers {
+                        ctx.opacity = moonAlpha * ga
+                        ctx.fill(
+                            Path(ellipseIn: CGRect(x: moonX - gr, y: moonY - gr,
+                                                   width: gr * 2, height: gr * 2)),
+                            with: .color(.white))
+                    }
+                    ctx.opacity = moonAlpha * 0.92
+                    ctx.fill(
+                        Path(ellipseIn: CGRect(x: moonX - moonR, y: moonY - moonR,
+                                               width: moonR * 2, height: moonR * 2)),
+                        with: .color(Color(red: 0.96, green: 0.96, blue: 0.88)))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -606,13 +793,11 @@ private struct CyberpunkGrid: View {
                            with: .color(Color(red: 0.00, green: 1.00, blue: 0.40)),
                            lineWidth: 0.6)
 
-                // Horizontal scan bar sweeping down
                 let scanY = CGFloat(fmod(t * 0.22, 1.0)) * size.height
                 var bar   = Path()
                 bar.addRect(CGRect(x: 0, y: scanY, width: size.width, height: 3))
                 ctx.opacity = 0.30
                 ctx.fill(bar, with: .color(Color(red: 0.00, green: 1.00, blue: 0.40)))
-                // Glow trail above bar
                 var glow = Path()
                 glow.addRect(CGRect(x: 0, y: max(0, scanY - 18), width: size.width, height: 18))
                 ctx.opacity = 0.07
