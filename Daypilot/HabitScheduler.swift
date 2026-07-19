@@ -121,6 +121,7 @@ struct HabitScheduler {
     }
 
     /// Remove all pending notifications for this habit.
+    static func cancel(_ task: Daypilot,
                        center: UNUserNotificationCenter = .current()) {
         let ids = (0..<30).map { notifID(task, index: $0) } + [task.uuid.uuidString]
         center.removePendingNotificationRequests(withIdentifiers: ids)
