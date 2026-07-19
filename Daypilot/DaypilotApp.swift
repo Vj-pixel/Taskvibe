@@ -160,6 +160,9 @@ class Daypilot: Identifiable {
     var taskEmoji: String? = nil
     var attachmentImagePath: String? = nil   // filename relative to Documents dir
 
+    // Completion timestamp (nil for habits, which reset daily via lastCompletedDate)
+    var completedAt: Date? = nil
+
     var attachmentImage: UIImage? {
         guard let path = attachmentImagePath else { return nil }
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]

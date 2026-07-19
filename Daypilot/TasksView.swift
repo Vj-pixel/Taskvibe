@@ -396,6 +396,7 @@ struct TaskContentView: View {
                         HStack(spacing: 10) {
                             Button {
                                 sub.isCompleted.toggle()
+                                updateProgressFromSubtasks()
                                 try? modelContext.save()
                                 HapticEngine.impact(.light)
                             } label: {
@@ -473,6 +474,14 @@ struct TaskContentView: View {
     }
 
     private var ringColor: Color { AppThemes.find(selectedTheme).urgencyColor(for: task.urgency) }
+
+    private func updateProgressFromSubtasks() {
+        let total = task.subtasks.count
+        guard total > 0 else { return }
+        let done = task.subtasks.filter(\.isCompleted).count
+        let raw = Int((Double(done) / Double(total)) * 100)
+        task.progress = [0, 25, 50, 75, 100].min(by: { abs($0 - raw) < abs($1 - raw) }) ?? raw
+    }
 
     @ViewBuilder
     private var userTagBadge: some View {
@@ -1697,6 +1706,10 @@ struct TasksView: View {
     @State private var streakMilestone: Int? = nil
     @State private var celebrationHabitName: String = ""
 
+    // Undo-delete
+    @State private var pendingDeleteTask: Daypilot? = nil
+    @State private var deleteUndoJob: Task<Void, Never>? = nil
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -1716,9 +1729,17 @@ struct TasksView: View {
                 .zIndex(100)
             }
         }
+        .overlay(alignment: .bottom) {
+            if pendingDeleteTask != nil {
+                UndoDeleteToast { undoPendingDelete() }
+                    .padding(.bottom, 90)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(50)
+            }
+        }
+        .animation(.spring(response: 0.32, dampingFraction: 0.8), value: pendingDeleteTask != nil)
         .onAppear {
             animatedGradient = SunsetGradientManager.gradient(for: currentDate)
-            requestNotificationAuthorization()
         }
         .onReceive(timer) { input in
             withAnimation(.easeInOut(duration: 1.2)) {
@@ -1731,6 +1752,11 @@ struct TasksView: View {
                 animatedGradient = SunsetGradientManager.gradient(for: currentDate)
             }
             currentDate = Date()
+            // Refresh the 60-day notification window for every-other-day habits each time
+            // the app returns to foreground, preventing reminders from going silent.
+            for habit in daypilots where habit.type == .habit && habit.habitFrequency == .everyOtherDay {
+                HabitScheduler.schedule(habit)
+            }
         }
     }
 
@@ -2029,7 +2055,11 @@ struct TasksView: View {
     }
 
     private var filteredAndSortedDaypilots: [Daypilot] {
-        var base = daypilots.filter { ($0.parent == nil) && (!$0.isCompleted || $0.uuid == disappearingTaskID) }
+        var base = daypilots.filter {
+            ($0.parent == nil) &&
+            (!$0.isCompleted || $0.uuid == disappearingTaskID) &&
+            $0.uuid != pendingDeleteTask?.uuid
+        }
 
         // Search filter
         if !searchText.isEmpty {
@@ -2142,6 +2172,7 @@ struct TasksView: View {
                 }
             } else {
                 task.isCompleted = true
+                task.completedAt = Date()
                 disappearingTaskID = task.uuid
                 cancelNotification(for: task)
             }
@@ -2161,17 +2192,41 @@ struct TasksView: View {
             habitDeleteTarget = task
             showHabitDeleteDialog = true
         } else {
-            deleteTask(task)
+            initiateDelete(task)
         }
     }
 
-    private func deleteTask(_ task: Daypilot) {
-        withAnimation {
-            cancelNotification(for: task)
-            modelContext.delete(task)
-            try? modelContext.save()
+    // Buffers the delete with a 3.5s undo window before committing.
+    private func initiateDelete(_ task: Daypilot) {
+        deleteUndoJob?.cancel()
+        if let prev = pendingDeleteTask { commitDelete(prev) }
+        withAnimation { pendingDeleteTask = task }
+        deleteUndoJob = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 3_500_000_000)
+                commitDelete(task)
+                withAnimation { pendingDeleteTask = nil }
+            } catch { /* cancelled by undo */ }
         }
+    }
+
+    private func commitDelete(_ task: Daypilot) {
+        cancelNotification(for: task)
+        modelContext.delete(task)
+        try? modelContext.save()
         writeWidgetSnapshot()
+    }
+
+    private func undoPendingDelete() {
+        deleteUndoJob?.cancel()
+        deleteUndoJob = nil
+        withAnimation { pendingDeleteTask = nil }
+        HapticEngine.impact(.light)
+    }
+
+    // Used by the habit-delete confirmation dialog (no undo needed — user already confirmed).
+    private func deleteTask(_ task: Daypilot) {
+        commitDelete(task)
     }
 
     private func skipHabitToday(_ task: Daypilot) {
@@ -2252,7 +2307,11 @@ struct TasksView: View {
         }
         do {
             try modelContext.save()
-            scheduleHabitNotifications(for: newTask)
+            if newTask.type == .habit {
+                scheduleHabitNotifications(for: newTask)
+            } else {
+                HabitScheduler.scheduleTaskReminder(newTask)
+            }
             newTaskIDs.insert(newTask.uuid)
             isSheetShowing = false
             HapticEngine.impact(.light)
@@ -2279,7 +2338,11 @@ struct TasksView: View {
         task.reminderTime = formReminderEnabled ? formReminderTime : nil
         do {
             try modelContext.save()
-            scheduleHabitNotifications(for: task)
+            if task.type == .habit {
+                scheduleHabitNotifications(for: task)
+            } else {
+                HabitScheduler.scheduleTaskReminder(task)
+            }
             isEditingSheetShowing = false
             editingTask = nil
             HapticEngine.impact(.light)
@@ -2329,5 +2392,28 @@ struct TasksView: View {
         defaults.set(habitsDoneToday, forKey: "widgetHabitsDoneToday")
         defaults.set(UserDefaults.standard.string(forKey: "selectedTheme") ?? "original", forKey: "widgetTheme")
         WidgetCenter.shared.reloadAllTimelines()
+    }
+}
+
+// MARK: - Undo Delete Toast
+
+struct UndoDeleteToast: View {
+    let onUndo: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Text("Task deleted")
+                .font(.subheadline)
+                .foregroundColor(.white)
+            Button("Undo") { onUndo() }
+                .font(.subheadline.weight(.bold))
+                .foregroundColor(.yellow)
+        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 14)
+        .background(.ultraThinMaterial)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+        .shadow(color: .black.opacity(0.35), radius: 16, y: 4)
     }
 }

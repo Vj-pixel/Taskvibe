@@ -16,7 +16,7 @@ struct WeeklyReviewView: View {
 
     private var completedThisWeek: [Daypilot] {
         allTasks.filter { $0.isCompleted && $0.parent == nil &&
-            weekInterval.contains($0.createdAt) }
+            weekInterval.contains($0.completedAt ?? $0.createdAt) }
     }
 
     private var habitsCompletedThisWeek: [Daypilot] {

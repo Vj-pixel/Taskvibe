@@ -4,8 +4,7 @@ import SwiftData
 struct CalendarTaskView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var gradientManager: SunsetGradientManager
-    @State private var date: Date = Date()
-    @State private var daypilots: [Daypilot] = []
+    @Query(sort: \Daypilot.dueDate, order: .forward) private var daypilots: [Daypilot]
     @State private var selectedDate: Date = Date()
     @State private var displayedMonth: Date = Calendar.current.startOfMonth(for: Date())
     @State private var selectedTask: Daypilot? = nil
@@ -43,7 +42,6 @@ struct CalendarTaskView: View {
                     .presentationDragIndicator(.visible)
             }
         }
-        .onAppear(perform: fetchTasks)
     }
     
     private var monthHeader: some View {
@@ -177,14 +175,6 @@ struct CalendarTaskView: View {
         }
     }
     
-    private func fetchTasks() {
-        let descriptor = FetchDescriptor<Daypilot>(sortBy: [SortDescriptor(\.dueDate, order: .forward)])
-        do {
-            daypilots = try modelContext.fetch(descriptor)
-        } catch {
-            print("Failed to fetch tasks: \(error)")
-        }
-    }
 }
 
 // Glass-style row for a task in the list

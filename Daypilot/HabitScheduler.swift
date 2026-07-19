@@ -98,8 +98,29 @@ struct HabitScheduler {
         }
     }
 
+    /// Schedule a one-shot reminder notification for a regular (non-habit) task.
+    static func scheduleTaskReminder(_ task: Daypilot,
+                                      center: UNUserNotificationCenter = .current()) {
+        guard task.type == .task,
+              UserDefaults.standard.bool(forKey: "notificationsEnabled"),
+              let reminderTime = task.reminderTime,
+              reminderTime > Date() else { return }
+
+        center.removePendingNotificationRequests(withIdentifiers: [task.uuid.uuidString])
+
+        let content = UNMutableNotificationContent()
+        content.title = "Task Reminder"
+        content.body  = task.title
+        content.sound = .default
+
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: reminderTime)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        center.add(UNNotificationRequest(identifier: task.uuid.uuidString,
+                                          content: content,
+                                          trigger: trigger)) { _ in }
+    }
+
     /// Remove all pending notifications for this habit.
-    static func cancel(_ task: Daypilot,
                        center: UNUserNotificationCenter = .current()) {
         let ids = (0..<30).map { notifID(task, index: $0) } + [task.uuid.uuidString]
         center.removePendingNotificationRequests(withIdentifiers: ids)

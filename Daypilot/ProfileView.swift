@@ -576,6 +576,52 @@ struct StatView: View {
 
 // MARK: - ReauthenticationSheet
 
+// Keeps Apple reauth delegate alive for the duration of the sheet.
+private final class AppleReauthCoordinator: NSObject,
+    ASAuthorizationControllerDelegate,
+    ASAuthorizationControllerPresentationContextProviding {
+
+    let currentNonce: String
+    let onSuccess: () -> Void
+    let onError: (String) -> Void
+
+    init(nonce: String, onSuccess: @escaping () -> Void, onError: @escaping (String) -> Void) {
+        self.currentNonce = nonce
+        self.onSuccess = onSuccess
+        self.onError = onError
+    }
+
+    func authorizationController(controller: ASAuthorizationController,
+                                 didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard let cred = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let tokenData = cred.identityToken,
+              let idToken = String(data: tokenData, encoding: .utf8) else {
+            onError("Failed to retrieve Apple ID token."); return
+        }
+        let firebaseCred = OAuthProvider.credential(providerID: .apple,
+                                                     idToken: idToken,
+                                                     rawNonce: currentNonce)
+        Auth.auth().currentUser?.reauthenticate(with: firebaseCred) { _, error in
+            if let error { self.onError(error.localizedDescription) }
+            else { self.onSuccess() }
+        }
+    }
+
+    func authorizationController(controller: ASAuthorizationController,
+                                 didCompleteWithError error: Error) {
+        let e = error as NSError
+        guard e.code != ASAuthorizationError.canceled.rawValue else { return }
+        onError(error.localizedDescription)
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first(where: { $0.isKeyWindow }) ?? ASPresentationAnchor()
+    }
+}
+
 struct ReauthenticationSheet: View {
     let email: String
     let authProvider: String
@@ -585,6 +631,7 @@ struct ReauthenticationSheet: View {
     @State private var password = ""
     @State private var isAuthenticating = false
     @State private var errorMessage = ""
+    @State private var appleCoordinator: AppleReauthCoordinator?
     @Environment(\.dismiss) private var dismiss
 
     var isPasswordProvider: Bool { authProvider == "password" }
@@ -673,14 +720,61 @@ struct ReauthenticationSheet: View {
     }
 
     private func reauthenticateAndDelete() {
-        guard let user = Auth.auth().currentUser else { return }
-        isAuthenticating = true; errorMessage = ""
+        errorMessage = ""
+        isAuthenticating = true
         if isPasswordProvider {
+            guard let user = Auth.auth().currentUser else { isAuthenticating = false; return }
             let credential = EmailAuthProvider.credential(withEmail: email, password: password)
             user.reauthenticate(with: credential) { _, error in
                 isAuthenticating = false
                 if let error { errorMessage = error.localizedDescription } else { dismiss(); onSuccess() }
             }
+        } else if authProvider == "google.com" {
+            reauthWithGoogle()
+        } else if authProvider == "apple.com" {
+            reauthWithApple()
+        } else {
+            isAuthenticating = false
+            errorMessage = "Re-authentication is not supported for this sign-in method."
         }
+    }
+
+    private func reauthWithGoogle() {
+        guard let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+              let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController
+        else { isAuthenticating = false; return }
+
+        GIDSignIn.sharedInstance.signIn(withPresenting: root) { result, error in
+            isAuthenticating = false
+            if let error { errorMessage = error.localizedDescription; return }
+            guard let user = result?.user, let idToken = user.idToken?.tokenString else {
+                errorMessage = "Google sign-in failed — missing token."; return
+            }
+            let credential = GoogleAuthProvider.credential(withIDToken: idToken,
+                                                            accessToken: user.accessToken.tokenString)
+            Auth.auth().currentUser?.reauthenticate(with: credential) { _, error in
+                if let error { errorMessage = error.localizedDescription }
+                else { dismiss(); onSuccess() }
+            }
+        }
+    }
+
+    private func reauthWithApple() {
+        let nonce = randomNonceString()
+        let coordinator = AppleReauthCoordinator(
+            nonce: nonce,
+            onSuccess: { dismiss(); onSuccess() },
+            onError: { msg in isAuthenticating = false; errorMessage = msg }
+        )
+        appleCoordinator = coordinator
+
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = []
+        request.nonce = sha256(nonce)
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = coordinator
+        controller.presentationContextProvider = coordinator
+        controller.performRequests()
     }
 }

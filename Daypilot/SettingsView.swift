@@ -437,8 +437,8 @@ struct ChangeEmailView: View {
         do {
             let credential = EmailAuthProvider.credential(withEmail: currentEmail, password: currentPassword)
             try await user.reauthenticate(with: credential)
-            try await user.updateEmail(to: newEmail)
-            successMessage = "Email updated successfully."
+            try await user.sendEmailVerification(beforeUpdatingEmail: newEmail)
+            successMessage = "Verification link sent to \(newEmail). Your email updates after you click it."
             newEmail = ""; currentPassword = ""
         } catch {
             errorMessage = error.localizedDescription
