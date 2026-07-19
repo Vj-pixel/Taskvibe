@@ -86,14 +86,31 @@ struct HabitScheduler {
                 content: content, trigger: trigger)) { _ in }
 
         case .everyOtherDay:
-            for n in 0..<30 {
-                guard let fireDate = cal.date(byAdding: .day, value: n * 2, to: startDate),
-                      fireDate > Date() else { continue }
-                let components = cal.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
-                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            // Always schedule 30 future occurrences starting from the next valid slot
+            // relative to today, so habits created long ago still fire correctly.
+            let today = cal.startOfDay(for: Date())
+            let startDay = cal.startOfDay(for: startDate)
+            let daysSinceStart = cal.dateComponents([.day], from: startDay, to: today).day ?? 0
+            // Round up to the next even-day offset so we stay in-phase with the habit
+            var offset = daysSinceStart % 2 == 0 ? daysSinceStart : daysSinceStart + 1
+            var scheduled = 0
+            while scheduled < 30 {
+                guard let occDay = cal.date(byAdding: .day, value: offset, to: startDay) else { break }
+                var fire = cal.dateComponents([.year, .month, .day], from: occDay)
+                fire.hour   = hourMinute.hour
+                fire.minute = hourMinute.minute
+                guard let fireDate = cal.date(from: fire), fireDate > Date() else {
+                    offset += 2; continue
+                }
+                let trigger = UNCalendarNotificationTrigger(
+                    dateMatching: cal.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate),
+                    repeats: false
+                )
                 center.add(UNNotificationRequest(
-                    identifier: notifID(task, index: n),
+                    identifier: notifID(task, index: scheduled),
                     content: content, trigger: trigger)) { _ in }
+                scheduled += 1
+                offset += 2
             }
         }
     }

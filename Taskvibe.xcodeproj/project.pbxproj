@@ -338,7 +338,7 @@
 					};
 				};
 			};
-			buildConfigurationList = F3BD4C012DFEA11400F460D8 /* Build configuration list for PBXProject "Daypilot" */;
+			buildConfigurationList = F3BD4C012DFEA11400F460D8 /* Build configuration list for PBXProject "Taskvibe" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -786,7 +786,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F3BD4C012DFEA11400F460D8 /* Build configuration list for PBXProject "Daypilot" */ = {
+		F3BD4C012DFEA11400F460D8 /* Build configuration list for PBXProject "Taskvibe" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F3BD4C252DFEA11500F460D8 /* Debug */,

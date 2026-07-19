@@ -3,6 +3,44 @@
 
 import SwiftUI
 import SwiftData
+import Security
+
+// MARK: - Keychain Helper
+
+private enum KeychainHelper {
+    static func save(_ value: String, forKey key: String) {
+        let data = Data(value.utf8)
+        let query: [CFString: Any] = [
+            kSecClass:            kSecClassGenericPassword,
+            kSecAttrAccount:      key,
+            kSecValueData:        data,
+            kSecAttrAccessible:   kSecAttrAccessibleWhenUnlocked
+        ]
+        SecItemDelete(query as CFDictionary)
+        SecItemAdd(query as CFDictionary, nil)
+    }
+
+    static func load(forKey key: String) -> String? {
+        let query: [CFString: Any] = [
+            kSecClass:       kSecClassGenericPassword,
+            kSecAttrAccount: key,
+            kSecReturnData:  kCFBooleanTrue!,
+            kSecMatchLimit:  kSecMatchLimitOne
+        ]
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
+              let data = item as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func delete(forKey key: String) {
+        let query: [CFString: Any] = [
+            kSecClass:       kSecClassGenericPassword,
+            kSecAttrAccount: key
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+}
 
 // MARK: - Canvas Data Models
 
@@ -117,8 +155,7 @@ enum CanvasTimeFilter: String, CaseIterable {
 
 struct CanvasSetupView: View {
     @AppStorage("canvasDomain") private var domain: String = ""
-    @AppStorage("canvasToken") private var token: String = ""
-    var onConnect: () -> Void
+    var onConnect: (String) -> Void
 
     @State private var localDomain: String = ""
     @State private var localToken: String = ""
@@ -175,13 +212,14 @@ struct CanvasSetupView: View {
             }
 
             Button {
-                guard !localDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                      !localToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                let cleanDomain = localDomain.trimmingCharacters(in: .whitespacesAndNewlines)
+                let cleanToken = localToken.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !cleanDomain.isEmpty, !cleanToken.isEmpty else {
                     showError = true; return
                 }
-                domain = localDomain.trimmingCharacters(in: .whitespacesAndNewlines)
-                token = localToken.trimmingCharacters(in: .whitespacesAndNewlines)
-                onConnect()
+                domain = cleanDomain
+                KeychainHelper.save(cleanToken, forKey: "canvasToken")
+                onConnect(cleanToken)
             } label: {
                 Text("Connect")
                     .fontWeight(.semibold)
@@ -195,7 +233,7 @@ struct CanvasSetupView: View {
         .padding(24)
         .onAppear {
             localDomain = domain
-            localToken = token
+            localToken = KeychainHelper.load(forKey: "canvasToken") ?? ""
         }
         .alert("Please enter both a domain and an access token.", isPresented: $showError) {
             Button("OK", role: .cancel) {}
@@ -259,7 +297,8 @@ struct CanvasAssignmentRow: View {
 
 struct CanvasView: View {
     @AppStorage("canvasDomain") private var domain: String = ""
-    @AppStorage("canvasToken") private var token: String = ""
+    // Token is stored in Keychain, not UserDefaults
+    @State private var token: String = KeychainHelper.load(forKey: "canvasToken") ?? ""
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var gradientManager: SunsetGradientManager
 
@@ -283,7 +322,8 @@ struct CanvasView: View {
                 Group {
                     if !isConnected || showSetup {
                         ScrollView {
-                            CanvasSetupView {
+                            CanvasSetupView { newToken in
+                                token = newToken
                                 showSetup = false
                                 Task { await loadData() }
                             }

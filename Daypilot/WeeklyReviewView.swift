@@ -32,7 +32,7 @@ struct WeeklyReviewView: View {
         formatter.dateFormat = "EEE"
         var counts = [Int: Int]()
         for task in completedThisWeek {
-            let weekday = cal.component(.weekday, from: task.createdAt)
+            let weekday = cal.component(.weekday, from: task.completedAt ?? task.createdAt)
             counts[weekday, default: 0] += 1
         }
         for habit in habitsCompletedThisWeek {

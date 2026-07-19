@@ -18,8 +18,8 @@ struct ContributionGraphView: View {
     private var activityByDay: [Date: Int] {
         var dict: [Date: Int] = [:]
         for task in daypilots where task.isCompleted && task.type == .task {
-            guard let due = task.dueDate else { continue }
-            dict[calendar.startOfDay(for: due), default: 0] += 1
+            guard let date = task.completedAt ?? task.dueDate else { continue }
+            dict[calendar.startOfDay(for: date), default: 0] += 1
         }
         for habit in daypilots where habit.type == .habit {
             guard let last = habit.lastCompletedDate else { continue }

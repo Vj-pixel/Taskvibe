@@ -49,6 +49,21 @@ struct DaypilotApp: App {
     @StateObject private var gradientManager = SunsetGradientManager()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
+    // CloudKit-backed container; falls back to local-only if iCloud is unavailable.
+    static let sharedModelContainer: ModelContainer = {
+        let schema = Schema([Daypilot.self])
+        do {
+            let config = ModelConfiguration(
+                schema: schema,
+                cloudKitDatabase: .private("iCloud.com.varunjajara.Daypilot")
+            )
+            return try ModelContainer(for: schema, configurations: [config])
+        } catch {
+            let local = ModelConfiguration(schema: schema)
+            return try! ModelContainer(for: schema, configurations: [local])
+        }
+    }()
+
     var body: some Scene {
         WindowGroup {
             RootView(
@@ -60,7 +75,7 @@ struct DaypilotApp: App {
                 GIDSignIn.sharedInstance.handle(url)
             }
         }
-        .modelContainer(for: Daypilot.self)
+        .modelContainer(Self.sharedModelContainer)
     }
 
     init() {
@@ -128,8 +143,8 @@ enum HabitFrequency: String, Codable, CaseIterable {
 @Model
 class Daypilot: Identifiable {
     var uuid: UUID = UUID()
-    
-    var title: String
+
+    var title: String = ""
     var dueDate: Date?
     var urgencyRaw: String = UrgencyLevel.notUrgent.rawValue
     var isCompleted: Bool = false
