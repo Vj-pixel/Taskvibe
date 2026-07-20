@@ -240,59 +240,67 @@ struct FutureHabitStripes: View {
 // MARK: - Habit Fire Effect
 
 struct HabitFlameEffect: View {
-    @State private var pulse = false
-
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(
-                    LinearGradient(
-                        colors: [.red.opacity(0.9), .orange, .yellow, .orange, .red.opacity(0.9)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 2.5
-                )
-                .opacity(pulse ? 1.0 : 0.35)
-            GeometryReader { geo in
-                ForEach(0..<5, id: \.self) { i in
-                    RisingFlameParticle(
-                        x: geo.size.width * (0.12 + 0.18 * CGFloat(i)),
-                        bottomY: geo.size.height - 4,
-                        riseAmount: min(geo.size.height * 0.45, 38),
-                        delay: Double(i) * 0.32
-                    )
+            // Deep ember wash — bottom is red-hot, fades upward
+            LinearGradient(
+                colors: [
+                    Color(red: 1.0, green: 0.16, blue: 0.0).opacity(0.62),
+                    Color(red: 1.0, green: 0.42, blue: 0.0).opacity(0.32),
+                    Color(red: 1.0, green: 0.60, blue: 0.0).opacity(0.12),
+                    Color.clear
+                ],
+                startPoint: .bottom, endPoint: .top
+            )
+
+            // Continuous 30-fps flame field via TimelineView + Canvas
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { tl in
+                Canvas { ctx, size in
+                    let t = tl.date.timeIntervalSinceReferenceDate
+
+                    // Back layer — large, slow orange blobs that rise tall
+                    for i in 0 ..< 36 {
+                        let fi = Double(i)
+                        let speed = 0.38 + (fi.truncatingRemainder(dividingBy: 5)) * 0.11
+                        let phase = (t * speed + fi * 0.139).truncatingRemainder(dividingBy: 1.0)
+                        let baseX = size.width * (fi / 35.0)
+                        let sway = CGFloat(sin(t * 2.1 + fi * 1.31)) * 18
+                        let riseMax = size.height * CGFloat(0.62 + (fi.truncatingRemainder(dividingBy: 7)) * 0.054)
+                        let cy = size.height - CGFloat(phase) * riseMax
+                        let cx = min(max(baseX + sway, 2), size.width - 2)
+                        let h = CGFloat((1 - phase) * 30 + 8)
+                        let w = h * 0.60
+                        let alpha = (phase < 0.22 ? phase / 0.22 : (1 - phase)) * 0.82
+                        let hue = 0.020 + phase * 0.068
+                        ctx.opacity = alpha
+                        ctx.fill(
+                            Path(ellipseIn: CGRect(x: cx - w / 2, y: cy - h, width: w, height: h)),
+                            with: .color(Color(hue: hue, saturation: 1.0, brightness: 1.0))
+                        )
+                    }
+
+                    // Front layer — smaller, faster yellow-white cores
+                    for i in 0 ..< 22 {
+                        let fi = Double(i)
+                        let phase = (t * 0.92 + fi * 0.193).truncatingRemainder(dividingBy: 1.0)
+                        let baseX = size.width * (fi / 21.0)
+                        let sway = CGFloat(sin(t * 4.4 + fi * 2.3)) * 8
+                        let riseMax = size.height * 0.40
+                        let cy = size.height - CGFloat(phase) * riseMax
+                        let cx = min(max(baseX + sway, 2), size.width - 2)
+                        let sz = CGFloat((1 - phase) * 13 + 3)
+                        ctx.opacity = (1 - phase) * 0.95
+                        ctx.fill(
+                            Path(ellipseIn: CGRect(x: cx - sz * 0.38, y: cy - sz,
+                                                   width: sz * 0.76, height: sz)),
+                            with: .color(Color(hue: 0.128, saturation: 0.42, brightness: 1.0))
+                        )
+                    }
                 }
+                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
         }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 0.75).repeatForever(autoreverses: true)) {
-                pulse = true
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 16))
         .allowsHitTesting(false)
-    }
-}
-
-private struct RisingFlameParticle: View {
-    let x: CGFloat
-    let bottomY: CGFloat
-    let riseAmount: CGFloat
-    let delay: Double
-    @State private var phase: CGFloat = 0
-
-    var body: some View {
-        Text("🔥")
-            .font(.system(size: 10))
-            .position(x: x, y: bottomY - phase * riseAmount)
-            .opacity(phase < 0.35 ? Double(phase / 0.35) : Double((1 - phase) / 0.65))
-            .onAppear {
-                withAnimation(
-                    .linear(duration: 1.5)
-                    .repeatForever(autoreverses: false)
-                    .delay(delay)
-                ) { phase = 1.0 }
-            }
     }
 }
 
@@ -303,45 +311,103 @@ struct HabitIceEffect: View {
 
     var body: some View {
         ZStack {
+            // Frosted ice fill — blue-white, semi-opaque (you can still read the card)
             RoundedRectangle(cornerRadius: 16)
                 .fill(LinearGradient(
-                    colors: [Color.cyan.opacity(0.18), Color.blue.opacity(0.10)],
+                    colors: [
+                        Color(red: 0.60, green: 0.91, blue: 1.00).opacity(0.50),
+                        Color(red: 0.84, green: 0.97, blue: 1.00).opacity(0.24),
+                        Color(red: 0.55, green: 0.88, blue: 1.00).opacity(0.46)
+                    ],
                     startPoint: .topLeading, endPoint: .bottomTrailing
                 ))
+
+            // Crystal facets, ice cracks, and specular highlights
+            Canvas { ctx, size in
+
+                // ── Crystalline facets (sin-seeded, fully deterministic) ──
+                for i in 0 ..< 60 {
+                    let fi = Double(i)
+                    let cx = (sin(fi * 1.713 + 0.419) * 0.5 + 0.5) * Double(size.width)
+                    let cy = (sin(fi * 2.317 + 1.173) * 0.5 + 0.5) * Double(size.height)
+                    let radius = 7.0 + (sin(fi * 3.731) * 0.5 + 0.5) * 14.0
+                    let sides = 4 + Int((sin(fi * 5.129) * 0.5 + 0.5) * 4)
+                    let isLight = sin(fi * 4.371) > 0
+
+                    var path = Path()
+                    for s in 0 ..< sides {
+                        let angle = Double(s) / Double(sides) * .pi * 2 + fi * 0.443
+                        let r = radius * (0.60 + (sin(fi * 2.871 + Double(s)) * 0.5 + 0.5) * 0.40)
+                        let px = cx + cos(angle) * r
+                        let py = cy + sin(angle) * r
+                        if s == 0 { path.move(to: CGPoint(x: px, y: py)) }
+                        else      { path.addLine(to: CGPoint(x: px, y: py)) }
+                    }
+                    path.closeSubpath()
+                    ctx.opacity = 0.05 + (sin(fi * 3.113) * 0.5 + 0.5) * 0.10
+                    ctx.fill(path, with: .color(isLight ? .white : Color(red: 0.5, green: 0.9, blue: 1.0)))
+                }
+
+                // ── Ice cracks ────────────────────────────────────────────
+                let cracks: [[(Double, Double)]] = [
+                    [(0.11, 0.07), (0.25, 0.22), (0.39, 0.16), (0.53, 0.34)],
+                    [(0.70, 0.05), (0.62, 0.20), (0.76, 0.33), (0.68, 0.49)],
+                    [(0.04, 0.56), (0.20, 0.48), (0.36, 0.65), (0.50, 0.57)],
+                    [(0.79, 0.52), (0.91, 0.67), (0.76, 0.80), (0.88, 0.93)],
+                    [(0.42, 0.71), (0.56, 0.61), (0.67, 0.78), (0.83, 0.88)],
+                    [(0.47, 0.10), (0.42, 0.26), (0.58, 0.21)],
+                    [(0.18, 0.82), (0.30, 0.91), (0.23, 0.96)],
+                    [(0.60, 0.40), (0.72, 0.50), (0.68, 0.60)],
+                ]
+                for crack in cracks {
+                    var path = Path()
+                    for (idx, pt) in crack.enumerated() {
+                        let p = CGPoint(x: pt.0 * Double(size.width), y: pt.1 * Double(size.height))
+                        if idx == 0 { path.move(to: p) } else { path.addLine(to: p) }
+                    }
+                    ctx.opacity = 0.38
+                    ctx.stroke(path, with: .color(.white),
+                               style: StrokeStyle(lineWidth: 1.1, lineCap: .round, lineJoin: .round))
+                }
+
+                // ── Specular highlights (bright spots simulating refraction) ──
+                for i in 0 ..< 12 {
+                    let fi = Double(i)
+                    let hx = (sin(fi * 2.173 + 0.531) * 0.5 + 0.5) * Double(size.width)
+                    let hy = (sin(fi * 1.971 + 1.837) * 0.5 + 0.5) * Double(size.height)
+                    let hr = 3.0 + (sin(fi * 3.413) * 0.5 + 0.5) * 10.0
+                    ctx.opacity = 0.22
+                    ctx.fill(Path(ellipseIn: CGRect(x: hx - hr / 2, y: hy - hr / 2,
+                                                    width: hr, height: hr)),
+                             with: .color(.white))
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+
+            // Outer ice-block border — thick (7 pt), white-cyan gradient, shimmers
             RoundedRectangle(cornerRadius: 16)
                 .stroke(
                     LinearGradient(
-                        colors: [.cyan, .white.opacity(0.85), .blue, .white.opacity(0.85), .cyan],
+                        colors: [
+                            Color.white.opacity(0.93),
+                            Color(red: 0.50, green: 0.88, blue: 1.00).opacity(0.85),
+                            Color.white.opacity(0.70),
+                            Color(red: 0.30, green: 0.75, blue: 1.00).opacity(0.92),
+                            Color.white.opacity(0.82)
+                        ],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     ),
-                    lineWidth: 2.5
+                    lineWidth: 7
                 )
-                .opacity(shimmer ? 0.95 : 0.45)
-            GeometryReader { geo in
-                Text("❄️").font(.system(size: 11))
-                    .position(x: geo.size.width * 0.07, y: geo.size.height * 0.15)
-                    .opacity(shimmer ? 0.80 : 0.25)
-                    .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(0.0), value: shimmer)
-                Text("❄️").font(.system(size: 11))
-                    .position(x: geo.size.width * 0.93, y: geo.size.height * 0.12)
-                    .opacity(shimmer ? 0.60 : 0.20)
-                    .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(0.6), value: shimmer)
-                Text("❄️").font(.system(size: 11))
-                    .position(x: geo.size.width * 0.06, y: geo.size.height * 0.85)
-                    .opacity(shimmer ? 0.80 : 0.25)
-                    .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(0.4), value: shimmer)
-                Text("❄️").font(.system(size: 11))
-                    .position(x: geo.size.width * 0.93, y: geo.size.height * 0.88)
-                    .opacity(shimmer ? 0.65 : 0.20)
-                    .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(1.0), value: shimmer)
-                Text("❄️").font(.system(size: 9))
-                    .position(x: geo.size.width * 0.50, y: geo.size.height * 0.08)
-                    .opacity(shimmer ? 0.60 : 0.20)
-                    .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(0.2), value: shimmer)
-            }
+                .opacity(shimmer ? 1.0 : 0.62)
+
+            // Inner ring — creates the illusion of a thick ice wall
+            RoundedRectangle(cornerRadius: 11)
+                .stroke(Color.white.opacity(shimmer ? 0.50 : 0.20), lineWidth: 2)
+                .padding(6)
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
                 shimmer = true
             }
         }
@@ -593,9 +659,16 @@ struct TaskContentView: View {
                 HabitIceEffect()
             }
         }
-        .shadow(color: isOnFire ? .orange.opacity(0.45) : isFrozen ? .cyan.opacity(0.40) : .black.opacity(0.1),
-                radius: 10, x: 0, y: isOnFire || isFrozen ? 2 : 5)
-        .shadow(color: .white.opacity(0.1), radius: 1, x: 0, y: 1)
+        .shadow(
+            color: isOnFire ? .red.opacity(0.72) : isFrozen ? .cyan.opacity(0.75) : .black.opacity(0.10),
+            radius: isOnFire ? 26 : isFrozen ? 26 : 10,
+            x: 0, y: isOnFire || isFrozen ? 0 : 5
+        )
+        .shadow(
+            color: isOnFire ? .orange.opacity(0.48) : isFrozen ? Color(red: 0.6, green: 0.9, blue: 1.0).opacity(0.48) : .white.opacity(0.10),
+            radius: isOnFire || isFrozen ? 11 : 1,
+            x: 0, y: isOnFire || isFrozen ? 0 : 1
+        )
         .scaleEffect(taskScale)
         .rotationEffect(.degrees(taskRotation))
         .opacity(showingAction ? 0.3 : cardOpacity)
@@ -663,6 +736,7 @@ struct TaskContentView: View {
 
     private var cardOpacity: Double {
         if isFutureHabit { return 0.55 }
+        if isOnFire || isFrozen { return 1.0 }
         return task.type == .habit && HabitScheduler.isDoneToday(task) ? 0.45 : 1.0
     }
 }
