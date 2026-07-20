@@ -1335,19 +1335,6 @@ struct TaskFormView: View {
     }
 }
 
-// MARK: - Add Task Button
-
-struct AddTaskButton: View {
-    let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "plus")
-                .foregroundColor(.white)
-                .font(.system(size: 20, weight: .bold))
-        }
-    }
-}
-
 // MARK: - Mini Calendar Strip
 
 struct MiniCalendarStrip: View {
@@ -1885,14 +1872,30 @@ struct TasksView: View {
                         Image(systemName: isSearching ? "xmark" : "magnifyingglass")
                             .foregroundColor(.white)
                     }
-                    if pomodoroPlacement == "corner" {
-                        Button { isPomodoroShowing = true } label: {
-                            Image(systemName: "timer").foregroundColor(.white)
+                    Menu {
+                        Button {
+                            resetForm()
+                            selectedType = .task
+                            isSheetShowing = true
+                        } label: {
+                            Label("New Task", systemImage: "checkmark.circle")
                         }
-                    }
-                    AddTaskButton {
-                        resetForm()
-                        isSheetShowing.toggle()
+                        Button {
+                            resetForm()
+                            selectedType = .habit
+                            isSheetShowing = true
+                        } label: {
+                            Label("New Habit", systemImage: "repeat.circle")
+                        }
+                        Button {
+                            isPomodoroShowing = true
+                        } label: {
+                            Label("Focus Timer", systemImage: "timer")
+                        }
+                    } label: {
+                        Image(systemName: "plus")
+                            .foregroundColor(.white)
+                            .font(.system(size: 20, weight: .bold))
                     }
                 }
             }
