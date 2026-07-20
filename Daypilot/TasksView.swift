@@ -237,6 +237,118 @@ struct FutureHabitStripes: View {
     }
 }
 
+// MARK: - Habit Fire Effect
+
+struct HabitFlameEffect: View {
+    @State private var pulse = false
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(
+                    LinearGradient(
+                        colors: [.red.opacity(0.9), .orange, .yellow, .orange, .red.opacity(0.9)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 2.5
+                )
+                .opacity(pulse ? 1.0 : 0.35)
+            GeometryReader { geo in
+                ForEach(0..<5, id: \.self) { i in
+                    RisingFlameParticle(
+                        x: geo.size.width * (0.12 + 0.18 * CGFloat(i)),
+                        bottomY: geo.size.height - 4,
+                        riseAmount: min(geo.size.height * 0.45, 38),
+                        delay: Double(i) * 0.32
+                    )
+                }
+            }
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.75).repeatForever(autoreverses: true)) {
+                pulse = true
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .allowsHitTesting(false)
+    }
+}
+
+private struct RisingFlameParticle: View {
+    let x: CGFloat
+    let bottomY: CGFloat
+    let riseAmount: CGFloat
+    let delay: Double
+    @State private var phase: CGFloat = 0
+
+    var body: some View {
+        Text("🔥")
+            .font(.system(size: 10))
+            .position(x: x, y: bottomY - phase * riseAmount)
+            .opacity(phase < 0.35 ? Double(phase / 0.35) : Double((1 - phase) / 0.65))
+            .onAppear {
+                withAnimation(
+                    .linear(duration: 1.5)
+                    .repeatForever(autoreverses: false)
+                    .delay(delay)
+                ) { phase = 1.0 }
+            }
+    }
+}
+
+// MARK: - Habit Ice Effect
+
+struct HabitIceEffect: View {
+    @State private var shimmer = false
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(LinearGradient(
+                    colors: [Color.cyan.opacity(0.18), Color.blue.opacity(0.10)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(
+                    LinearGradient(
+                        colors: [.cyan, .white.opacity(0.85), .blue, .white.opacity(0.85), .cyan],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 2.5
+                )
+                .opacity(shimmer ? 0.95 : 0.45)
+            GeometryReader { geo in
+                Text("❄️").font(.system(size: 11))
+                    .position(x: geo.size.width * 0.07, y: geo.size.height * 0.15)
+                    .opacity(shimmer ? 0.80 : 0.25)
+                    .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(0.0), value: shimmer)
+                Text("❄️").font(.system(size: 11))
+                    .position(x: geo.size.width * 0.93, y: geo.size.height * 0.12)
+                    .opacity(shimmer ? 0.60 : 0.20)
+                    .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(0.6), value: shimmer)
+                Text("❄️").font(.system(size: 11))
+                    .position(x: geo.size.width * 0.06, y: geo.size.height * 0.85)
+                    .opacity(shimmer ? 0.80 : 0.25)
+                    .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(0.4), value: shimmer)
+                Text("❄️").font(.system(size: 11))
+                    .position(x: geo.size.width * 0.93, y: geo.size.height * 0.88)
+                    .opacity(shimmer ? 0.65 : 0.20)
+                    .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(1.0), value: shimmer)
+                Text("❄️").font(.system(size: 9))
+                    .position(x: geo.size.width * 0.50, y: geo.size.height * 0.08)
+                    .opacity(shimmer ? 0.60 : 0.20)
+                    .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(0.2), value: shimmer)
+            }
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                shimmer = true
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 // MARK: - Action Hint View (unified, replaces four separate backgrounds)
 
 struct ActionHintView: View {
@@ -330,6 +442,15 @@ struct TaskContentView: View {
                                     .font(.caption2)
                                     .foregroundColor(.orange)
                             }
+                        }
+                        if task.streakFreezeActive {
+                            Text("🧊 Streak frozen")
+                                .font(.caption2)
+                                .foregroundColor(.cyan)
+                        } else if task.freezeCount > 0 {
+                            Text("🧊 ×\(task.freezeCount)")
+                                .font(.caption2)
+                                .foregroundColor(.cyan.opacity(0.85))
                         }
                         if doneToday {
                             Text("✓ Done for today")
@@ -454,7 +575,7 @@ struct TaskContentView: View {
             ZStack(alignment: .topTrailing) {
                 if task.type == .habit {
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(ringColor, lineWidth: 3)
+                        .stroke(effectiveRingColor, lineWidth: 3)
                 } else if progressDisplayStyle == "segmented" {
                     SegmentedOutlineProgress(progress: task.progress, color: ringColor, cornerRadius: 12)
                         .padding(4)
@@ -465,7 +586,15 @@ struct TaskContentView: View {
                 }
             }
         )
-        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+        .overlay {
+            if isOnFire {
+                HabitFlameEffect()
+            } else if isFrozen {
+                HabitIceEffect()
+            }
+        }
+        .shadow(color: isOnFire ? .orange.opacity(0.45) : isFrozen ? .cyan.opacity(0.40) : .black.opacity(0.1),
+                radius: 10, x: 0, y: isOnFire || isFrozen ? 2 : 5)
         .shadow(color: .white.opacity(0.1), radius: 1, x: 0, y: 1)
         .scaleEffect(taskScale)
         .rotationEffect(.degrees(taskRotation))
@@ -474,6 +603,21 @@ struct TaskContentView: View {
     }
 
     private var ringColor: Color { AppThemes.find(selectedTheme).urgencyColor(for: task.urgency) }
+
+    private var effectiveRingColor: Color {
+        guard task.type == .habit else { return ringColor }
+        if isFrozen { return .cyan }
+        if isOnFire { return .orange }
+        return ringColor
+    }
+
+    private var isOnFire: Bool {
+        task.type == .habit && task.streakCount >= 1 && !task.streakFreezeActive
+    }
+
+    private var isFrozen: Bool {
+        task.type == .habit && task.streakFreezeActive
+    }
 
     private func updateProgressFromSubtasks() {
         let total = task.subtasks.count
@@ -1693,6 +1837,9 @@ struct TasksView: View {
     @State private var streakMilestone: Int? = nil
     @State private var celebrationHabitName: String = ""
 
+    // Freeze awarded toast
+    @State private var showFreezeAwardedToast = false
+
     // Undo-delete
     @State private var pendingDeleteTask: Daypilot? = nil
     @State private var deleteUndoJob: Task<Void, Never>? = nil
@@ -1724,9 +1871,19 @@ struct TasksView: View {
                     .zIndex(50)
             }
         }
+        .overlay(alignment: .top) {
+            if showFreezeAwardedToast {
+                FreezeAwardedToast()
+                    .padding(.top, 60)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(48)
+            }
+        }
         .animation(.spring(response: 0.32, dampingFraction: 0.8), value: pendingDeleteTask != nil)
+        .animation(.spring(response: 0.38, dampingFraction: 0.8), value: showFreezeAwardedToast)
         .onAppear {
             animatedGradient = SunsetGradientManager.gradient(for: currentDate)
+            checkAndApplyStreakFreezes()
         }
         .onReceive(timer) { input in
             withAnimation(.easeInOut(duration: 1.2)) {
@@ -1739,8 +1896,7 @@ struct TasksView: View {
                 animatedGradient = SunsetGradientManager.gradient(for: currentDate)
             }
             currentDate = Date()
-            // Refresh the 60-day notification window for every-other-day habits each time
-            // the app returns to foreground, preventing reminders from going silent.
+            checkAndApplyStreakFreezes()
             for habit in daypilots where habit.type == .habit && habit.habitFrequency == .everyOtherDay {
                 HabitScheduler.schedule(habit)
             }
@@ -2161,6 +2317,7 @@ struct TasksView: View {
             if task.type == .habit {
                 let newStreak = HabitScheduler.updatedStreak(for: task)
                 task.streakCount = newStreak
+                task.streakFreezeActive = false
                 task.lastCompletedDate = Date()
                 task.isCompleted = false
                 cancelNotification(for: task)
@@ -2171,6 +2328,18 @@ struct TasksView: View {
                     celebrationHabitName = task.title
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                         withAnimation { streakMilestone = newStreak }
+                    }
+                }
+                let freezeMilestones: Set<Int> = [1, 3, 5, 7, 9]
+                if freezeMilestones.contains(newStreak) {
+                    task.freezeCount += 1
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                            showFreezeAwardedToast = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                            withAnimation { showFreezeAwardedToast = false }
+                        }
                     }
                 }
             } else {
@@ -2188,6 +2357,36 @@ struct TasksView: View {
                 withAnimation { disappearingTaskID = nil }
             }
         }
+    }
+
+    private func checkAndApplyStreakFreezes() {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        var changed = false
+        for habit in daypilots where habit.type == .habit {
+            guard let last = habit.lastCompletedDate else { continue }
+            let lastDay = cal.startOfDay(for: last)
+            let daysDiff = cal.dateComponents([.day], from: lastDay, to: today).day ?? 0
+            guard daysDiff > 1 else { continue }
+            if habit.streakFreezeActive {
+                // If they missed another day after the freeze, the streak truly breaks
+                if daysDiff > 2 {
+                    habit.streakFreezeActive = false
+                    habit.streakCount = 0
+                    changed = true
+                }
+            } else if daysDiff == 2 && habit.streakCount > 0 && habit.freezeCount > 0 {
+                // Missed exactly yesterday — auto-apply a freeze
+                habit.freezeCount -= 1
+                habit.streakFreezeActive = true
+                changed = true
+            } else if daysDiff >= 2 && habit.streakCount > 0 {
+                // Missed one or more days with no freeze — break the streak
+                habit.streakCount = 0
+                changed = true
+            }
+        }
+        if changed { try? modelContext.save() }
     }
 
     private func handleDeleteRequest(_ task: Daypilot) {
@@ -2418,5 +2617,30 @@ struct UndoDeleteToast: View {
         .clipShape(Capsule())
         .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
         .shadow(color: .black.opacity(0.35), radius: 16, y: 4)
+    }
+}
+
+// MARK: - Freeze Awarded Toast
+
+struct FreezeAwardedToast: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            Text("🧊")
+                .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Streak Freeze Earned!")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                Text("Miss a day and your streak stays safe")
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.cyan.opacity(0.45), lineWidth: 1))
+        .shadow(color: .cyan.opacity(0.30), radius: 14, y: 4)
     }
 }

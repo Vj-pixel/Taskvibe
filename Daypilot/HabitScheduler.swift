@@ -47,6 +47,9 @@ struct HabitScheduler {
            cal.isDate(lastDay, inSameDayAs: yesterday) {
             return habit.streakCount + 1      // consecutive day
         }
+        if habit.streakFreezeActive {
+            return habit.streakCount + 1      // freeze bridged the missed day
+        }
         return 1                              // streak broken
     }
 

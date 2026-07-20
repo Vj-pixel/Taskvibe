@@ -150,6 +150,10 @@ class Daypilot: Identifiable {
     var streakCount: Int = 0
     var lastCompletedDate: Date? = nil
 
+    // Streak freeze inventory and protection state
+    var freezeCount: Int = 0
+    var streakFreezeActive: Bool = false
+
     // Source label for imported tasks (e.g., "Canvas", "Calendar")
     var sourceTag: String? = nil
 
