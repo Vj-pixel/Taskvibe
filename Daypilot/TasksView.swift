@@ -735,9 +735,9 @@ struct TaskContentView: View {
         .onAppear {
             guard task.type == .habit, isOnFire, let last = task.lastCompletedDate else { return }
             let elapsed = Date().timeIntervalSince(last)
-            guard elapsed < 180 else { return }
+            guard elapsed < 4 else { return }
             animatedFireActive = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + max(1, 180 - elapsed)) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + max(0.1, 4 - elapsed)) {
                 withAnimation(.easeOut(duration: 1.5)) { animatedFireActive = false }
             }
         }
@@ -745,7 +745,7 @@ struct TaskContentView: View {
             guard task.type == .habit, let newDate else { return }
             guard Date().timeIntervalSince(newDate) < 5 else { return }
             withAnimation { animatedFireActive = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 180) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
                 withAnimation(.easeOut(duration: 1.5)) { animatedFireActive = false }
             }
         }
