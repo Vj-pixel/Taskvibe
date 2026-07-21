@@ -242,65 +242,118 @@ struct FutureHabitStripes: View {
 struct HabitFlameEffect: View {
     var body: some View {
         ZStack {
-            // Deep ember wash — bottom is red-hot, fades upward
+            // Deep ember wash — red-hot at base, clears upward
             LinearGradient(
                 colors: [
-                    Color(red: 1.0, green: 0.16, blue: 0.0).opacity(0.62),
-                    Color(red: 1.0, green: 0.42, blue: 0.0).opacity(0.32),
-                    Color(red: 1.0, green: 0.60, blue: 0.0).opacity(0.12),
+                    Color(red: 1.0, green: 0.10, blue: 0.0).opacity(0.70),
+                    Color(red: 1.0, green: 0.38, blue: 0.0).opacity(0.36),
+                    Color(red: 1.0, green: 0.58, blue: 0.0).opacity(0.14),
                     Color.clear
                 ],
                 startPoint: .bottom, endPoint: .top
             )
 
-            // Continuous 30-fps flame field via TimelineView + Canvas
+            // 30-fps triangular flame field
             TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { tl in
                 Canvas { ctx, size in
                     let t = tl.date.timeIntervalSinceReferenceDate
 
-                    // Back layer — large, slow orange blobs that rise tall
-                    for i in 0 ..< 36 {
+                    // Back layer — large slow triangular orange/red flames
+                    for i in 0 ..< 30 {
                         let fi = Double(i)
-                        let speed = 0.38 + (fi.truncatingRemainder(dividingBy: 5)) * 0.11
-                        let phase = (t * speed + fi * 0.139).truncatingRemainder(dividingBy: 1.0)
-                        let baseX = size.width * (fi / 35.0)
-                        let sway = CGFloat(sin(t * 2.1 + fi * 1.31)) * 18
+                        let speed = 0.34 + (fi.truncatingRemainder(dividingBy: 5)) * 0.10
+                        let phase = (t * speed + fi * 0.141).truncatingRemainder(dividingBy: 1.0)
+                        let baseX = size.width * (fi / 29.0)
+                        let lean = CGFloat(sin(t * 1.9 + fi * 1.27)) * 14
                         let riseMax = size.height * CGFloat(0.62 + (fi.truncatingRemainder(dividingBy: 7)) * 0.054)
                         let cy = size.height - CGFloat(phase) * riseMax
-                        let cx = min(max(baseX + sway, 2), size.width - 2)
+                        let cx = min(max(baseX, 4), size.width - 4)
                         let h = CGFloat((1 - phase) * 30 + 8)
-                        let w = h * 0.60
-                        let alpha = (phase < 0.22 ? phase / 0.22 : (1 - phase)) * 0.82
-                        let hue = 0.020 + phase * 0.068
+                        let w = h * 0.52
+                        let alpha = (phase < 0.20 ? phase / 0.20 : (1 - phase)) * 0.82
+                        let hue = 0.016 + phase * 0.072
+
+                        // Triangular flame: pointed tip, curved sides, round base
+                        var flame = Path()
+                        flame.move(to: CGPoint(x: cx + lean * 0.35, y: cy - h))
+                        flame.addQuadCurve(to: CGPoint(x: cx + w * 0.50, y: cy),
+                                           control: CGPoint(x: cx + w * 0.68 + lean * 0.2, y: cy - h * 0.20))
+                        flame.addQuadCurve(to: CGPoint(x: cx - w * 0.50, y: cy),
+                                           control: CGPoint(x: cx, y: cy + h * 0.07))
+                        flame.addQuadCurve(to: CGPoint(x: cx + lean * 0.35, y: cy - h),
+                                           control: CGPoint(x: cx - w * 0.68 + lean * 0.2, y: cy - h * 0.20))
+                        flame.closeSubpath()
+
                         ctx.opacity = alpha
-                        ctx.fill(
-                            Path(ellipseIn: CGRect(x: cx - w / 2, y: cy - h, width: w, height: h)),
-                            with: .color(Color(hue: hue, saturation: 1.0, brightness: 1.0))
-                        )
+                        ctx.fill(flame, with: .color(Color(hue: hue, saturation: 1.0, brightness: 1.0)))
                     }
 
-                    // Front layer — smaller, faster yellow-white cores
-                    for i in 0 ..< 22 {
+                    // Front layer — small fast yellow-white triangular cores
+                    for i in 0 ..< 18 {
                         let fi = Double(i)
-                        let phase = (t * 0.92 + fi * 0.193).truncatingRemainder(dividingBy: 1.0)
-                        let baseX = size.width * (fi / 21.0)
-                        let sway = CGFloat(sin(t * 4.4 + fi * 2.3)) * 8
-                        let riseMax = size.height * 0.40
+                        let phase = (t * 0.95 + fi * 0.197).truncatingRemainder(dividingBy: 1.0)
+                        let baseX = size.width * (fi / 17.0)
+                        let lean = CGFloat(sin(t * 4.6 + fi * 2.4)) * 6
+                        let riseMax = size.height * 0.38
                         let cy = size.height - CGFloat(phase) * riseMax
-                        let cx = min(max(baseX + sway, 2), size.width - 2)
-                        let sz = CGFloat((1 - phase) * 13 + 3)
+                        let cx = min(max(baseX, 4), size.width - 4)
+                        let h = CGFloat((1 - phase) * 13 + 3)
+                        let w = h * 0.48
+
+                        var core = Path()
+                        core.move(to: CGPoint(x: cx + lean * 0.2, y: cy - h))
+                        core.addQuadCurve(to: CGPoint(x: cx + w * 0.5, y: cy),
+                                          control: CGPoint(x: cx + w * 0.62, y: cy - h * 0.18))
+                        core.addQuadCurve(to: CGPoint(x: cx - w * 0.5, y: cy),
+                                          control: CGPoint(x: cx, y: cy + h * 0.06))
+                        core.addQuadCurve(to: CGPoint(x: cx + lean * 0.2, y: cy - h),
+                                          control: CGPoint(x: cx - w * 0.62, y: cy - h * 0.18))
+                        core.closeSubpath()
+
                         ctx.opacity = (1 - phase) * 0.95
-                        ctx.fill(
-                            Path(ellipseIn: CGRect(x: cx - sz * 0.38, y: cy - sz,
-                                                   width: sz * 0.76, height: sz)),
-                            with: .color(Color(hue: 0.128, saturation: 0.42, brightness: 1.0))
-                        )
+                        ctx.fill(core, with: .color(Color(hue: 0.122, saturation: 0.38, brightness: 1.0)))
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             }
         }
         .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Streak Fire Badge (static, post-animation)
+
+struct StreakFireBadge: View {
+    let count: Int
+
+    private let cols = 3
+    private let maxDots = 9
+
+    private var displayCount: Int { min(count, maxDots) }
+    private var overflow: Int    { max(0, count - maxDots) }
+    private var rows: Int        { max(1, (displayCount + cols - 1) / cols) }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            ForEach(0 ..< rows, id: \.self) { row in
+                HStack(spacing: 1) {
+                    let start = row * cols
+                    let end   = min(start + cols, displayCount)
+                    ForEach(start ..< end, id: \.self) { _ in
+                        Text("🔥").font(.system(size: 14))
+                    }
+                }
+            }
+            if overflow > 0 {
+                Text("+\(overflow)")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.orange)
+                    .padding(.trailing, 1)
+            }
+        }
+        .padding(5)
+        .background(Color.black.opacity(0.38))
+        .clipShape(RoundedRectangle(cornerRadius: 9))
     }
 }
 
@@ -465,6 +518,7 @@ struct TaskContentView: View {
     @AppStorage("progressDisplayStyle") private var progressDisplayStyle = "segmented"
     @Environment(\.modelContext) private var modelContext
     @State private var isExpanded = false
+    @State private var animatedFireActive: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -650,29 +704,51 @@ struct TaskContentView: View {
                     StatusCornerBadge(status: task.status, color: ringColor)
                         .padding(6)
                 }
+                // Static streak badge — shown once animated fire settles
+                if isOnFire && !animatedFireActive {
+                    StreakFireBadge(count: task.streakCount)
+                        .padding(6)
+                }
             }
         )
         .overlay {
-            if isOnFire {
+            if isOnFire && animatedFireActive {
                 HabitFlameEffect()
             } else if isFrozen {
                 HabitIceEffect()
             }
         }
         .shadow(
-            color: isOnFire ? .red.opacity(0.72) : isFrozen ? .cyan.opacity(0.75) : .black.opacity(0.10),
-            radius: isOnFire ? 26 : isFrozen ? 26 : 10,
-            x: 0, y: isOnFire || isFrozen ? 0 : 5
+            color: isOnFire && animatedFireActive ? .red.opacity(0.72) : isFrozen ? .cyan.opacity(0.75) : .black.opacity(0.10),
+            radius: isOnFire && animatedFireActive ? 26 : isFrozen ? 26 : 10,
+            x: 0, y: (isOnFire && animatedFireActive) || isFrozen ? 0 : 5
         )
         .shadow(
-            color: isOnFire ? .orange.opacity(0.48) : isFrozen ? Color(red: 0.6, green: 0.9, blue: 1.0).opacity(0.48) : .white.opacity(0.10),
-            radius: isOnFire || isFrozen ? 11 : 1,
-            x: 0, y: isOnFire || isFrozen ? 0 : 1
+            color: isOnFire && animatedFireActive ? .orange.opacity(0.48) : isFrozen ? Color(red: 0.6, green: 0.9, blue: 1.0).opacity(0.48) : .white.opacity(0.10),
+            radius: (isOnFire && animatedFireActive) || isFrozen ? 11 : 1,
+            x: 0, y: (isOnFire && animatedFireActive) || isFrozen ? 0 : 1
         )
         .scaleEffect(taskScale)
         .rotationEffect(.degrees(taskRotation))
         .opacity(showingAction ? 0.3 : cardOpacity)
         .offset(dragOffset)
+        .onAppear {
+            guard task.type == .habit, isOnFire, let last = task.lastCompletedDate else { return }
+            let elapsed = Date().timeIntervalSince(last)
+            guard elapsed < 180 else { return }
+            animatedFireActive = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + max(1, 180 - elapsed)) {
+                withAnimation(.easeOut(duration: 1.5)) { animatedFireActive = false }
+            }
+        }
+        .onChange(of: task.lastCompletedDate) { _, newDate in
+            guard task.type == .habit, let newDate else { return }
+            guard Date().timeIntervalSince(newDate) < 5 else { return }
+            withAnimation { animatedFireActive = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 180) {
+                withAnimation(.easeOut(duration: 1.5)) { animatedFireActive = false }
+            }
+        }
     }
 
     private var ringColor: Color { AppThemes.find(selectedTheme).urgencyColor(for: task.urgency) }
